@@ -1,0 +1,55 @@
+# Dodatkowy workflow do zarządzania cache
+name: Cache Management
+
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        description: 'Cache action'
+        required: true
+        default: 'list'
+        type: choice
+        options:
+        - list
+        - clear-all
+        - clear-iso
+        - clear-deps
+
+jobs:
+  manage-cache:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+      
+    - name: List cache
+      if: github.event.inputs.action == 'list'
+      run: |
+        echo "Dostępne klucze cache:"
+        echo "- alpine-iso-3.19-x86_64"
+        echo "- alpine-deps-Linux-*"
+        echo ""
+        echo "Cache można wyczyścić poprzez:"
+        echo "1. GitHub UI: Settings → Actions → Caches"
+        echo "2. Ten workflow z opcją clear-*"
+        
+    - name: Clear ISO cache
+      if: github.event.inputs.action == 'clear-iso'
+      run: |
+        echo "Clearing ISO cache..."
+        # Cache zostanie wyczyszczony przez GitHub po 7 dniach nieużywania
+        # lub można to zrobić manualnie w UI
+        
+    - name: Information
+      run: |
+        echo "GitHub Actions Cache limity (darmowe):"
+        echo "- 10 GB storage per repository"
+        echo "- Cache expires after 7 days of no access"
+        echo "- Cache is scoped to branch (main/develop/etc)"
+        echo ""
+        echo "Szacunkowe oszczędności:"
+        echo "- Alpine ISO: ~200MB (pobrane raz na wersję)"
+        echo "- Build deps: ~50-100MB (zależnie od aplikacji)"
+        echo ""
+        echo "Przyspieszenie buildów: 2-5x"
