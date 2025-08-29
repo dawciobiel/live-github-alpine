@@ -207,13 +207,18 @@ jobs:
         MODLOOP_PATH=""
         if [ -f "iso-contents/boot/modloop-standard" ]; then
           MODLOOP_PATH="iso-contents/boot/modloop-standard"
+        elif [ -f "iso-contents/boot/modloop-lts" ]; then
+          MODLOOP_PATH="iso-contents/boot/modloop-lts"
         elif [ -f "iso-contents/boot/x86_64/modloop-standard" ]; then
           MODLOOP_PATH="iso-contents/boot/x86_64/modloop-standard"
+        elif [ -f "iso-contents/boot/x86_64/modloop-lts" ]; then
+          MODLOOP_PATH="iso-contents/boot/x86_64/modloop-lts"
         else
-          echo "❌ Cannot find modloop-standard"
-          find iso-contents -name "*modloop*" -type f
+          echo "❌ Cannot find modloop"
+          find iso-contents -name "modloop*" -type f
           exit 1
         fi
+
         
         echo "📦 Unpacking modloop from: $MODLOOP_PATH"
         mkdir -p modloop-modify
