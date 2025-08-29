@@ -1,11 +1,15 @@
 #!/bin/bash
 set -e
 
-# Konfiguracja
-PACKAGE_NAME="hardclone-cli"
-PACKAGE_VERSION="2.1.4"
-PACKAGE_DESCRIPTION="Interactive partition backup creator with encryption, compression, and file splitting for Linux"
-MAINTAINER="Dawid Bielecki<dawciobiel@gmail.com>"
+# Konfiguracja - automatyczne wykrywanie z GitHub
+PACKAGE_NAME="${GITHUB_REPOSITORY##*/}"  # Nazwa z repo GitHub
+PACKAGE_VERSION="$(date +%Y.%m.%d)"      # Lub wczytaj z pliku version
+PACKAGE_DESCRIPTION="Custom application for Alpine Linux"
+MAINTAINER="${GITHUB_ACTOR:-Unknown} <${GITHUB_ACTOR:-unknown}@users.noreply.github.com>"
+
+# Override jeśli istnieją zmienne środowiskowe
+PACKAGE_NAME="${CUSTOM_PACKAGE_NAME:-$PACKAGE_NAME}"
+PACKAGE_VERSION="${CUSTOM_PACKAGE_VERSION:-$PACKAGE_VERSION}"
 
 echo "🔨 Budowanie paczki APK: ${PACKAGE_NAME}-${PACKAGE_VERSION}"
 
@@ -29,8 +33,10 @@ EOF
     chmod +x usr/local/bin/my-app
 fi
 
-# Tworzenie struktury metadanych APK
-mkdir -p .PKGINFO
+# Tworzenie metadanych APK
+echo "📝 Tworzenie metadanych APK..."
+
+# Plik .PKGINFO (główne metadane)
 cat > .PKGINFO << EOF
 pkgname = $PACKAGE_NAME
 pkgver = $PACKAGE_VERSION-r0
@@ -38,22 +44,23 @@ pkgdesc = $PACKAGE_DESCRIPTION
 url = https://github.com/$(echo ${GITHUB_REPOSITORY:-"user/repo"})
 builddate = $(date -u +%s)
 packager = $MAINTAINER
-size = $(du -sb . | cut -f1)
+size = $(du -sb . | cut -f1 2>/dev/null || echo "1000")
 arch = x86_64
 origin = $PACKAGE_NAME
 maintainer = $MAINTAINER
 license = MIT
 EOF
 
-# Tworzenie listy plików
-find . -type f ! -path "./.PKGINFO" ! -name ".*" | sed 's|^\./||' | sort > .PKGINFO/FILES
+# Lista plików (bez metadanych)
+find . -type f ! -name ".PKGINFO" ! -name ".*" | sed 's|^\./||' | sort > .FILELIST
 
 echo "📦 Zawartość paczki:"
-cat .PKGINFO/FILES
+cat .FILELIST | head -20  # Pokaż pierwsze 20 plików
+[ $(wc -l < .FILELIST) -gt 20 ] && echo "... i $(( $(wc -l < .FILELIST) - 20 )) więcej plików"
 
-# Tworzenie archiwum tar
+# Tworzenie archiwum APK
 echo "📦 Tworzenie archiwum APK..."
-tar -czf "../${PACKAGE_NAME}-${PACKAGE_VERSION}-r0.apk" .
+tar -czf "../${PACKAGE_NAME}-${PACKAGE_VERSION}-r0.apk" --exclude=".FILELIST" .
 
 # Podpisywanie paczki (jeśli klucz istnieje)
 if [ -f "../../signing-key.rsa" ]; then
