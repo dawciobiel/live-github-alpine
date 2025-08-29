@@ -1,0 +1,111 @@
+name: Build Custom Alpine Linux ISO
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+env:
+  ALPINE_VERSION: "3.19"
+  ALPINE_ARCH: "x86_64"
+
+jobs:
+  build-custom-iso:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+          alpine-sdk \
+          build-essential \
+          squashfs-tools \
+          xorriso \
+          syslinux-utils \
+          genisoimage \
+          wget \
+          curl \
+          openssl
+
+    - name: Setup Alpine build environment
+      run: |
+        # Pobieranie kluczy Alpine
+        wget -O /tmp/alpine-devel@lists.alpinelinux.org-4a6a0840.rsa.pub \
+          https://alpinelinux.org/keys/alpine-devel@lists.alpinelinux.org-4a6a0840.rsa.pub
+        sudo cp /tmp/alpine-devel@lists.alpinelinux.org-4a6a0840.rsa.pub \
+          /etc/apk/keys/
+
+    - name: Setup signing keys from secrets
+      run: |
+        # Utworzenie klucza prywatnego z GitHub Secrets
+        echo "${{ secrets.SIGNING_PRIVATE_KEY }}" > signing-key.rsa
+        echo "${{ secrets.SIGNING_PUBLIC_KEY }}" > signing-key.rsa.pub
+
+        chmod 600 signing-key.rsa
+        chmod 644 signing-key.rsa.pub
+
+        # Weryfikacja kluczy
+        openssl rsa -in signing-key.rsa -check -noout
+        echo "Klucze zostały poprawnie załadowane"
+
+    - name: Build APK package
+      run: |
+        # Tworzenie struktury dla paczki APK
+        mkdir -p build-apk
+        ./scripts/build-apk.sh
+
+    - name: Cache Alpine ISO
+      uses: actions/cache@v4
+      id: cache-alpine-iso
+      with:
+        path: alpine-original.iso
+        key: alpine-iso-${{ env.ALPINE_VERSION }}-${{ env.ALPINE_ARCH }}
+        restore-keys: |
+          alpine-iso-${{ env.ALPINE_VERSION }}-
+
+    - name: Download Alpine Linux ISO
+      if: steps.cache-alpine-iso.outputs.cache-hit != 'true'
+      run: |
+        ALPINE_ISO="alpine-standard-${{ env.ALPINE_VERSION }}.0-${{ env.ALPINE_ARCH }}.iso"
+        echo "Downloading: $ALPINE_ISO"
+        wget -O alpine-original.iso \
+          "https://dl-cdn.alpinelinux.org/alpine/v${{ env.ALPINE_VERSION }}/releases/${{ env.ALPINE_ARCH }}/$ALPINE_ISO"
+
+        # Weryfikacja pobranego ISO
+        if [ -f alpine-original.iso ]; then
+          echo "✅ ISO pobrane: $(du -h alpine-original.iso | cut -f1)"
+        else
+          echo "❌ Błąd pobierania ISO"
+          exit 1
+        fi
+
+    - name: Extract and modify ISO
+      run: |
+        ./scripts/modify-iso.sh
+
+    - name: Create custom ISO
+      run: |
+        ./scripts/create-iso.sh
+
+    - name: Upload custom ISO
+      uses: actions/upload-artifact@v4
+      with:
+        name: custom-alpine-iso
+        path: custom-alpine-*.iso
+        retention-days: 30
+
+    - name: Create Release (if tagged)
+      if: startsWith(github.ref, 'refs/tags/')
+      uses: softprops/action-gh-release@v1
+      with:
+        files: custom-alpine-*.iso
+        draft: false
+        prerelease: false
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
