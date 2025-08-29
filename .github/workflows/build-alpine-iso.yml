@@ -22,8 +22,8 @@ jobs:
     - name: Install dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y \
-          alpine-sdk \
+        
+        sudo apt-get install -y \          
           build-essential \
           squashfs-tools \
           xorriso \
@@ -32,6 +32,7 @@ jobs:
           wget \
           curl \
           openssl
+          # alpine-sdk # <- Not for 'ubuntu-latest' runner
 
     - name: Setup Alpine build environment
       run: |
