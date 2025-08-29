@@ -7,87 +7,82 @@ PACKAGE_VERSION="2.1.4"
 PACKAGE_DESCRIPTION="Interactive partition backup creator with encryption, compression, and file splitting for Linux"
 MAINTAINER="Dawid Bielecki<dawciobiel@gmail.com>"
 
+echo "🔨 Budowanie paczki APK: ${PACKAGE_NAME}-${PACKAGE_VERSION}"
+
 # Tworzenie struktury paczki
-mkdir -p build-apk/$PACKAGE_NAME
-cd build-apk/$PACKAGE_NAME
+mkdir -p build-apk/${PACKAGE_NAME}
+cd build-apk/${PACKAGE_NAME}
 
 # Kopiowanie plików aplikacji
-cp -r ../../app/* . || echo "Brak katalogu app/, tworzę przykładową strukturę"
-
-# Tworzenie przykładowej struktury jeśli nie istnieje
-if [ ! -d "../../app" ]; then
+if [ -d "../../app" ]; then
+    echo "📁 Kopiowanie plików z katalogu app/"
+    cp -r ../../app/* . 2>/dev/null || echo "Katalog app/ jest pusty"
+else
+    echo "📁 Brak katalogu app/, tworzę przykładową strukturę"
     mkdir -p usr/local/bin
-    echo '#!/bin/sh' > usr/local/bin/my-app
-    echo 'echo "Hello from my custom Alpine app!"' >> usr/local/bin/my-app
+    cat > usr/local/bin/my-app << 'EOF'
+#!/bin/sh
+echo "Hello from my custom Alpine app!"
+echo "Version: 1.0.0"
+echo "Installed successfully!"
+EOF
     chmod +x usr/local/bin/my-app
 fi
 
-# Tworzenie pliku APKBUILD
-cat > APKBUILD << EOF
-# Maintainer: $MAINTAINER
-pkgname=$PACKAGE_NAME
-pkgver=$PACKAGE_VERSION
-pkgrel=0
-pkgdesc="$PACKAGE_DESCRIPTION"
-url="https://github.com/$(echo $GITHUB_REPOSITORY)"
-arch="all"
-license="MIT"
-depends=""
-makedepends=""
-install=""
-subpackages=""
-source=""
-builddir="\$srcdir"
-
-build() {
-    return 0
-}
-
-check() {
-    return 0
-}
-
-package() {
-    # Kopiowanie plików do \$pkgdir
-    if [ -d "usr" ]; then
-        cp -r usr "\$pkgdir/"
-    fi
-
-    if [ -d "etc" ]; then
-        cp -r etc "\$pkgdir/"
-    fi
-
-    if [ -d "var" ]; then
-        cp -r var "\$pkgdir/"
-    fi
-
-    # Ustawianie uprawnień
-    find "\$pkgdir" -type f -name "*.sh" -exec chmod +x {} \;
-    find "\$pkgdir/usr/local/bin" -type f -exec chmod +x {} \; 2>/dev/null || true
-}
+# Tworzenie struktury metadanych APK
+mkdir -p .PKGINFO
+cat > .PKGINFO << EOF
+pkgname = $PACKAGE_NAME
+pkgver = $PACKAGE_VERSION-r0
+pkgdesc = $PACKAGE_DESCRIPTION
+url = https://github.com/$(echo ${GITHUB_REPOSITORY:-"user/repo"})
+builddate = $(date -u +%s)
+packager = $MAINTAINER
+size = $(du -sb . | cut -f1)
+arch = x86_64
+origin = $PACKAGE_NAME
+maintainer = $MAINTAINER
+license = MIT
 EOF
 
-# Generowanie klucza jeśli nie istnieje (dla lokalnego testowania)
-if [ ! -f "../../signing-key.rsa" ]; then
-    echo "Brak klucza podpisującego, używam tymczasowego..."
-    openssl genrsa -out ../../signing-key.rsa 2048
-    openssl rsa -in ../../signing-key.rsa -pubout -out ../../signing-key.rsa.pub
+# Tworzenie listy plików
+find . -type f ! -path "./.PKGINFO" ! -name ".*" | sed 's|^\./||' | sort > .PKGINFO/FILES
+
+echo "📦 Zawartość paczki:"
+cat .PKGINFO/FILES
+
+# Tworzenie archiwum tar
+echo "📦 Tworzenie archiwum APK..."
+tar -czf "../${PACKAGE_NAME}-${PACKAGE_VERSION}-r0.apk" .
+
+# Podpisywanie paczki (jeśli klucz istnieje)
+if [ -f "../../signing-key.rsa" ]; then
+    echo "🔐 Podpisywanie paczki..."
+    cd ..
+    
+    # Tworzenie podpisu
+    openssl dgst -sha256 -sign ../signing-key.rsa \
+        "${PACKAGE_NAME}-${PACKAGE_VERSION}-r0.apk" > \
+        "${PACKAGE_NAME}-${PACKAGE_VERSION}-r0.apk.sig"
+    
+    # Weryfikacja podpisu (opcjonalne)
+    if openssl dgst -sha256 -verify ../signing-key.rsa.pub \
+        -signature "${PACKAGE_NAME}-${PACKAGE_VERSION}-r0.apk.sig" \
+        "${PACKAGE_NAME}-${PACKAGE_VERSION}-r0.apk"; then
+        echo "✅ Podpis zweryfikowany pomyślnie"
+    else
+        echo "⚠️  Ostrzeżenie: Nie można zweryfikować podpisu"
+    fi
+    
+    cd ..
+else
+    echo "⚠️  Brak klucza podpisującego, pomijam podpisywanie"
+    cd ..
 fi
 
-# Konfiguracja abuild
-export PACKAGER="$MAINTAINER"
-export PACKAGER_PRIVKEY="$(pwd)/../../signing-key.rsa"
+# Kopiowanie zbudowanej paczki do głównego katalogu
+cp build-apk/${PACKAGE_NAME}-*.apk . 2>/dev/null || true
 
-# Instalacja publicznego klucza
-sudo cp ../../signing-key.rsa.pub /etc/apk/keys/
-
-# Budowanie paczki
-abuild-keygen -ai -n
-abuild checksum
-abuild -r
-
-# Kopiowanie zbudowanej paczki
-find ~/packages -name "${PACKAGE_NAME}-*.apk" -exec cp {} ../.. \;
-
-echo "Paczka APK została zbudowana pomyślnie!"
-ls -la ../../*.apk
+echo "✅ Paczka APK została zbudowana pomyślnie!"
+echo "📋 Pliki:"
+ls -la *.apk
