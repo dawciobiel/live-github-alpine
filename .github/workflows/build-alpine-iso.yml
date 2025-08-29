@@ -66,6 +66,9 @@ jobs:
         echo "Klucze zostały poprawnie załadowane"
 
     - name: Build APK package
+      env:
+        CUSTOM_PACKAGE_NAME: "hardclone-cli"  # Zmień na swoją nazwę
+        CUSTOM_PACKAGE_VERSION: "2.1.4"       # Zmień na swoją wersję
       run: |
         # Tworzenie struktury dla paczki APK
         mkdir -p build-apk
