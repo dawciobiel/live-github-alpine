@@ -143,6 +143,9 @@ jobs:
         
         # Tworzenie prostego pakietu APK (symulacja)
         cd pkg-temp
+        
+        # Upewnienie się, że katalog docelowy istnieje
+        mkdir -p ../../apks
         tar -czf ../../apks/hardclone-cli-2.1.4-r0.apk *
         
         echo "✅ Pakiet hardclone-cli zbudowany"
