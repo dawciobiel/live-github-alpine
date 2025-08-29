@@ -14,15 +14,16 @@ env:
 jobs:
   build-custom-iso:
     runs-on: ubuntu-latest
-
+    
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
-
-    - name: Install build dependencies
+      
+    - name: Install dependencies
       run: |
         sudo apt-get update
         sudo apt-get install -y \
+          alpine-sdk \
           build-essential \
           squashfs-tools \
           xorriso \
@@ -34,21 +35,28 @@ jobs:
 
     - name: Setup Alpine build environment
       run: |
+        # Tworzenie katalogu dla kluczy Alpine (Ubuntu nie ma tego domyślnie)
+        sudo mkdir -p /etc/apk/keys/
+        
         # Pobieranie kluczy Alpine
         wget -O /tmp/alpine-devel@lists.alpinelinux.org-4a6a0840.rsa.pub \
           https://alpinelinux.org/keys/alpine-devel@lists.alpinelinux.org-4a6a0840.rsa.pub
         sudo cp /tmp/alpine-devel@lists.alpinelinux.org-4a6a0840.rsa.pub \
           /etc/apk/keys/
+          
+        # Weryfikacja
+        echo "✅ Klucze Alpine zainstalowane:"
+        ls -la /etc/apk/keys/
 
     - name: Setup signing keys from secrets
       run: |
         # Utworzenie klucza prywatnego z GitHub Secrets
         echo "${{ secrets.SIGNING_PRIVATE_KEY }}" > signing-key.rsa
         echo "${{ secrets.SIGNING_PUBLIC_KEY }}" > signing-key.rsa.pub
-
+        
         chmod 600 signing-key.rsa
         chmod 644 signing-key.rsa.pub
-
+        
         # Weryfikacja kluczy
         openssl rsa -in signing-key.rsa -check -noout
         echo "Klucze zostały poprawnie załadowane"
@@ -75,7 +83,7 @@ jobs:
         echo "Downloading: $ALPINE_ISO"
         wget -O alpine-original.iso \
           "https://dl-cdn.alpinelinux.org/alpine/v${{ env.ALPINE_VERSION }}/releases/${{ env.ALPINE_ARCH }}/$ALPINE_ISO"
-
+        
         # Weryfikacja pobranego ISO
         if [ -f alpine-original.iso ]; then
           echo "✅ ISO pobrane: $(du -h alpine-original.iso | cut -f1)"
