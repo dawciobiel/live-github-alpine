@@ -1,6 +1,5 @@
 name: Build Custom Alpine Linux ISO
 
-
 on:
   push:
     branches: [ main, develop ]
@@ -36,39 +35,7 @@ jobs:
           tar \
           gzip
         
-        # Instalacja abuild (Alpine build tools) z source
-        if ! command -v abuild &> /dev/null; then
-          echo "Instalacja abuild z Alpine..."
-          ABUILD_VERSION="3.12.0"
-          wget -O abuild.tar.xz \
-            "https://git.alpinelinux.org/aports/snapshot/abuild-${ABUILD_VERSION}.tar.xz" || \
-          wget -O abuild.tar.gz \
-            "https://github.com/alpinelinux/abuild/archive/refs/tags/${ABUILD_VERSION}.tar.gz"
-          
-          if [ -f abuild.tar.xz ]; then
-            tar -xf abuild.tar.xz
-            cd abuild-${ABUILD_VERSION}
-          elif [ -f abuild.tar.gz ]; then
-            tar -xf abuild.tar.gz  
-            cd abuild-${ABUILD_VERSION}
-          else
-            echo "Używanie prostej implementacji abuild..."
-            mkdir -p /tmp/simple-abuild/bin
-            cat > /tmp/simple-abuild/bin/abuild << 'EOF'
-#!/bin/bash
-echo "Simplified abuild for CI..."
-exit 0
-EOF
-            chmod +x /tmp/simple-abuild/bin/abuild
-            sudo cp /tmp/simple-abuild/bin/abuild /usr/local/bin/
-            cd ..
-          fi
-          
-          if [ -d "abuild-${ABUILD_VERSION}" ]; then
-            sudo make install || echo "Make install failed, continuing..."
-            cd ..
-          fi
-        fi
+        echo "✅ Zależności zainstalowane (bez abuild - używamy manual APK build)"
 
     - name: Setup Alpine build environment
       run: |
