@@ -2,10 +2,10 @@
 set -e
 
 # Konfiguracja
-PACKAGE_NAME="my-app"
-PACKAGE_VERSION="1.0.0"
-PACKAGE_DESCRIPTION="Moja aplikacja dla Alpine Linux"
-MAINTAINER="Your Name <your.email@example.com>"
+PACKAGE_NAME="hardclone-cli"
+PACKAGE_VERSION="2.1.4"
+PACKAGE_DESCRIPTION="Interactive partition backup creator with encryption, compression, and file splitting for Linux"
+MAINTAINER="Dawid Bielecki<dawciobiel@gmail.com>"
 
 # Tworzenie struktury paczki
 mkdir -p build-apk/$PACKAGE_NAME
