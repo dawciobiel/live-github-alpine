@@ -32,7 +32,6 @@ jobs:
           wget \
           curl \
           openssl
-          # alpine-sdk # <- Not for 'ubuntu-latest' runner
 
     - name: Setup Alpine build environment
       run: |
