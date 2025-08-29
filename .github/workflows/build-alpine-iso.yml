@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
 
 env:
-  ALPINE_VERSION: "v3.18"
+  ALPINE_VERSION: "3.18"
   ALPINE_ARCH: "x86_64"
 
 jobs:
