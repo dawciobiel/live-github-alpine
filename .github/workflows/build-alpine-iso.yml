@@ -55,14 +55,14 @@ jobs:
 
         # Tworzenie APKBUILD za pomocą printf
         printf '%s\n' \
-"# Maintainer: Your Name <your.email@example.com>" \
-"pkgname=hardclone-cli" \
-"pkgver=2.1.4" \
-"pkgrel=0" \
+'"Maintainer: Dawid Bielecki <dawciobiel@gmail.com>"' \
+'"pkgname=hardclone-cli"' \
+'"pkgver=2.1.4"' \
+'"pkgrel=0"' \
 'pkgdesc="Hardware cloning utility"' \
-'url="https://github.com/yourusername/hardclone-cli"' \
+'url="https://github.com/dawciobiel/hardclone-cli"' \
 'arch="all"' \
-'license="MIT"' \
+'license="GPL"' \
 'depends="python3 py3-pip py3-dialog dialog"' \
 'makedepends="python3-dev py3-setuptools"' \
 'source="hardclone-cli-$pkgver.tar.gz"' \
