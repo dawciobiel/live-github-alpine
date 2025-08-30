@@ -230,25 +230,23 @@ jobs:
         fi
         
         echo "📦 Przebudowywanie: $MODLOOP_PATH"
+        echo "👤 Obecny użytkownik: $(whoami)"
+        echo "📁 Uprawnienia katalogu: $(ls -ld $(dirname "$MODLOOP_PATH"))"
+        echo "📄 Uprawnienia pliku: $(ls -l "$MODLOOP_PATH")"
         
-        # Uprawnienia - najpierw sudo dla całego katalogu
-        sudo chown -R $USER:$USER iso-contents/
-        sudo chmod -R u+w iso-contents/
+        # ZAWSZE używaj sudo dla operacji na modloop
+        echo "🔧 Używam sudo dla wszystkich operacji..."
         
-        # Sprawdź czy mamy uprawnienia
-        if [ ! -w "$(dirname "$MODLOOP_PATH")" ]; then
-          echo "⚠️  Brak uprawnień zapisu, używam sudo..."
-          # Backup z sudo
-          sudo cp "$MODLOOP_PATH" "$MODLOOP_PATH.backup"
-          # Rebuild z sudo
-          sudo mksquashfs modloop-modify "$MODLOOP_PATH" -comp xz -noappend
-          # Przywróć uprawnienia
-          sudo chown $USER:$USER "$MODLOOP_PATH"
-        else
-          # Standardowa procedura
-          cp "$MODLOOP_PATH" "$MODLOOP_PATH.backup"
-          mksquashfs modloop-modify "$MODLOOP_PATH" -comp xz -noappend
-        fi
+        # Backup z sudo
+        sudo cp "$MODLOOP_PATH" "$MODLOOP_PATH.backup"
+        
+        # Rebuild z sudo - nadpisz istniejący plik
+        sudo rm -f "$MODLOOP_PATH"
+        sudo mksquashfs modloop-modify "$MODLOOP_PATH" -comp xz -Xbcj x86
+        
+        # Przywróć odpowiednie uprawnienia
+        sudo chown $USER:$USER "$MODLOOP_PATH"
+        sudo chmod 644 "$MODLOOP_PATH"
         
         echo "✅ Modloop przebudowany"
         ls -la "$MODLOOP_PATH"
@@ -257,14 +255,12 @@ jobs:
         echo "🔍 Weryfikacja integralności..."
         if unsquashfs -l "$MODLOOP_PATH" >/dev/null 2>&1; then
           echo "✅ Modloop jest prawidłowy"
+          echo "📊 Rozmiar: $(du -h "$MODLOOP_PATH" | cut -f1)"
         else
           echo "❌ Modloop jest uszkodzony, przywracam backup..."
           if [ -f "$MODLOOP_PATH.backup" ]; then
-            if [ ! -w "$(dirname "$MODLOOP_PATH")" ]; then
-              sudo cp "$MODLOOP_PATH.backup" "$MODLOOP_PATH"
-            else
-              cp "$MODLOOP_PATH.backup" "$MODLOOP_PATH"
-            fi
+            sudo cp "$MODLOOP_PATH.backup" "$MODLOOP_PATH"
+            sudo chown $USER:$USER "$MODLOOP_PATH"
             echo "✅ Backup przywrócony"
           fi
           exit 1
