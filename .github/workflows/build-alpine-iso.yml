@@ -41,77 +41,74 @@ jobs:
           python3-dialog \
           dialog \
           tar \
-          gzip
+          gzip \
+          binutils
 
     - name: Setup Alpine build environment
       run: |
-        # Tworzenie struktury katalogów
-        mkdir -p alpine-build/{src,pkg,apks}
-        
+        mkdir -p alpine-build/apks
         echo "✅ Środowisko przygotowane"
 
     - name: Build hardclone-cli package
       run: |
         cd alpine-build
         
-        # Tworzenie prostego pakietu bez APKBUILD (bezpośrednio)
         echo "📦 Tworzenie pakietu hardclone-cli..."
         
-        # Tworzenie struktury pakietu
+        # Tworzenie struktury pakietu (bez katalogu .PKGINFO!)
         mkdir -p pkg/usr/bin
-        mkdir -p pkg/.PKGINFO
         
-        # Tworzenie prostego skryptu hardclone
+        # Tworzenie skryptu hardclone
         cat > pkg/usr/bin/hardclone << 'EOF'
-        #!/bin/sh
-        echo "hardclone-cli v2.1.4 - Hardware cloning utility"
-        echo "This is a demo version for Alpine Linux"
-        echo ""
-        echo "Usage: hardclone [options]"
-        echo "  --help    Show this help"
-        echo "  --version Show version"
-        echo ""
-        echo "Demo commands available:"
-        echo "  hardclone --disk-info    Show disk information"
-        echo "  hardclone --list-drives  List available drives"
-        
-        case "$1" in
-          --help|-h)
-            echo "Help displayed above"
-            ;;
-          --version|-v)
-            echo "hardclone-cli v2.1.4"
-            ;;
-          --disk-info)
-            echo "=== Disk Information ==="
-            lsblk 2>/dev/null || echo "lsblk not available"
-            ;;
-          --list-drives)
-            echo "=== Available Drives ==="
-            ls -la /dev/sd* /dev/nvme* 2>/dev/null || echo "No drives found"
-            ;;
-          *)
-            echo "Use --help for available options"
-            ;;
-        esac
-        EOF
+#!/bin/sh
+echo "hardclone-cli v2.1.4 - Hardware cloning utility"
+echo "This is a demo version for Alpine Linux"
+echo ""
+echo "Usage: hardclone [options]"
+echo "  --help    Show this help"
+echo "  --version Show version"
+echo ""
+echo "Demo commands available:"
+echo "  hardclone --disk-info    Show disk information"
+echo "  hardclone --list-drives  List available drives"
+
+case "$1" in
+  --help|-h)
+    echo "Help displayed above"
+    ;;
+  --version|-v)
+    echo "hardclone-cli v2.1.4"
+    ;;
+  --disk-info)
+    echo "=== Disk Information ==="
+    lsblk 2>/dev/null || echo "lsblk not available"
+    ;;
+  --list-drives)
+    echo "=== Available Drives ==="
+    ls -la /dev/sd* /dev/nvme* 2>/dev/null || echo "No drives found"
+    ;;
+  *)
+    echo "Use --help for available options"
+    ;;
+esac
+EOF
         
         chmod +x pkg/usr/bin/hardclone
         
-        # Tworzenie .PKGINFO (metadane pakietu APK)
+        # Tworzenie .PKGINFO jako PLIK (nie katalog!)
         cat > pkg/.PKGINFO << 'EOF'
-        pkgname = hardclone-cli
-        pkgver = 2.1.4-r0
-        pkgdesc = Hardware cloning utility
-        url = https://github.com/yourusername/hardclone-cli
-        builddate = 1693353600
-        packager = Auto Builder <builder@example.com>
-        size = 2048
-        arch = x86_64
-        origin = hardclone-cli
-        commit = demo123
-        maintainer = Auto Builder <builder@example.com>
-        EOF
+pkgname = hardclone-cli
+pkgver = 2.1.4-r0
+pkgdesc = Hardware cloning utility
+url = https://github.com/yourusername/hardclone-cli
+builddate = 1693353600
+packager = Auto Builder <builder@example.com>
+size = 2048
+arch = x86_64
+origin = hardclone-cli
+commit = demo123
+maintainer = Auto Builder <builder@example.com>
+EOF
         
         # Tworzenie właściwego pakietu APK
         cd pkg
@@ -130,10 +127,7 @@ jobs:
         # Sprzątanie
         rm debian-binary control.tar.gz data.tar.gz
         
-        echo "✅ Pakiet hardclone-cli zbudowany (format APK)"
-        
-        # Sprawdzenie czy plik został utworzony
-        echo "📋 Zawartość katalogu apks:"
+        echo "✅ Pakiet hardclone-cli zbudowany (prawdziwy format APK)"
         ls -la apks/
         file apks/hardclone-cli-2.1.4-r0.apk
 
@@ -142,65 +136,50 @@ jobs:
         cd alpine-build/apks
         
         echo "📦 Tworzenie indeksu repozytorium APK..."
-        
-        # Sprawdzenie czy katalog istnieje i czy są w nim pakiety
-        if [ ! -d "$(pwd)" ]; then
-          echo "❌ Katalog apks nie istnieje"
-          exit 1
-        fi
-        
-        echo "📋 Zawartość katalogu apks:"
         ls -la
         
-        # Sprawdzenie czy są pakiety
-        if ls *.apk 1> /dev/null 2>&1; then
-          for apk in *.apk; do
-            echo "Processing: $apk"
-            if ! tar -tzf "$apk" >/dev/null 2>&1; then
-              echo "⚠️  Nie można wyciągnąć metadanych z $apk, używam domyślnych"
-            fi
-          done
-        else
-          echo "❌ Brak plików APK w katalogu"
+        # Sprawdzenie pakietów
+        if ! ls *.apk 1> /dev/null 2>&1; then
+          echo "❌ Brak plików APK"
           exit 1
         fi
         
-        # Generowanie klucza podpisywania (tymczasowy)
-        echo "🔐 Generowanie tymczasowego klucza podpisywania..."
+        for apk in *.apk; do
+          echo "Processing: $apk"
+        done
+        
+        # Generowanie klucza podpisywania
+        echo "🔐 Generowanie klucza podpisywania..."
         openssl genrsa -out signing.key 2048
         openssl rsa -in signing.key -pubout -out signing.pub
         
-        # Tworzenie prostego indeksu APKINDEX
+        # Tworzenie APKINDEX
         cat > APKINDEX << 'EOF'
-        C:Q1/hardclone-cli-2.1.4-r0
-        P:hardclone-cli
-        V:2.1.4-r0
-        A:x86_64
-        S:1024
-        I:2048
-        T:Hardware cloning utility
-        U:https://github.com/yourusername/hardclone-cli
-        L:MIT
-        o:hardclone-cli
-        m:Your Name <your.email@example.com>
-        t:1693353600
-        c:Q1ABCD1234567890
+C:Q1/hardclone-cli-2.1.4-r0
+P:hardclone-cli
+V:2.1.4-r0
+A:x86_64
+S:1024
+I:2048
+T:Hardware cloning utility
+U:https://github.com/yourusername/hardclone-cli
+L:MIT
+o:hardclone-cli
+m:Auto Builder <builder@example.com>
+t:1693353600
+c:Q1ABCD1234567890
 
-        EOF
+EOF
         
-        # Kompresja indeksu
         tar -czf APKINDEX.tar.gz APKINDEX
         
-        # Podpisanie indeksu (opcjonalne)
+        # Podpisanie
         if command -v openssl >/dev/null 2>&1; then
-          echo "🔏 Podpisywanie indeksu..."
           openssl dgst -sha1 -sign signing.key APKINDEX.tar.gz | openssl base64 > APKINDEX.tar.gz.sig
           echo "✅ Indeks podpisany"
-        else
-          echo "⚠️  Brak OpenSSL, pomijam podpisywanie indeksu"
         fi
         
-        echo "✅ Indeks repozytorium utworzony:"
+        echo "✅ Indeks utworzony:"
         ls -la APKINDEX.tar.gz*
 
     - name: Download and prepare Alpine ISO
@@ -209,7 +188,6 @@ jobs:
         mkdir -p iso-download
         cd iso-download
         
-        # Pobieranie standardowego Alpine ISO
         ISO_URL="https://dl-cdn.alpinelinux.org/alpine/${{ env.ALPINE_VERSION }}/releases/${{ env.ALPINE_ARCH }}/alpine-standard-3.18.0-${{ env.ALPINE_ARCH }}.iso"
         
         echo "Pobieranie z: $ISO_URL"
@@ -227,7 +205,6 @@ jobs:
         mkdir -p iso-contents
         cd iso-download
         
-        # Montowanie ISO i kopiowanie zawartości
         sudo mkdir -p /mnt/iso
         sudo mount -o loop alpine-standard.iso /mnt/iso
         sudo cp -r /mnt/iso/* ../iso-contents/
@@ -239,21 +216,19 @@ jobs:
 
     - name: Modify modloop
       run: |
-        # Lokalizacja modloop w ISO
+        # Znajdź modloop
         MODLOOP_PATH=""
-        if [ -f "iso-contents/boot/modloop-standard" ]; then
-          MODLOOP_PATH="iso-contents/boot/modloop-standard"
-        elif [ -f "iso-contents/boot/x86_64/modloop-standard" ]; then
-          MODLOOP_PATH="iso-contents/boot/x86_64/modloop-standard"
-        elif [ -f "iso-contents/boot/modloop-lts" ]; then
+        if [ -f "iso-contents/boot/modloop-lts" ]; then
           MODLOOP_PATH="iso-contents/boot/modloop-lts"
+        elif [ -f "iso-contents/boot/modloop-standard" ]; then
+          MODLOOP_PATH="iso-contents/boot/modloop-standard"
         elif [ -f "iso-contents/boot/x86_64/modloop-lts" ]; then
           MODLOOP_PATH="iso-contents/boot/x86_64/modloop-lts"
+        elif [ -f "iso-contents/boot/x86_64/modloop-standard" ]; then
+          MODLOOP_PATH="iso-contents/boot/x86_64/modloop-standard"
         else
           echo "❌ Nie można znaleźć modloop"
-          echo "Dostępne pliki w boot:"
           find iso-contents -name "*modloop*" -type f
-          find iso-contents/boot -type f 2>/dev/null || true
           exit 1
         fi
         
@@ -264,7 +239,6 @@ jobs:
         if command -v unsquashfs >/dev/null 2>&1; then
           unsquashfs -d modloop-modify "$MODLOOP_PATH"
         else
-          # Fallback - użycie mount
           sudo mkdir -p /mnt/modloop
           sudo mount -o loop "$MODLOOP_PATH" /mnt/modloop
           sudo cp -a /mnt/modloop/* modloop-modify/
@@ -272,28 +246,21 @@ jobs:
           sudo chown -R $USER:$USER modloop-modify/
         fi
         
-        # Sprawdzenie czy katalogi istnieją
+        # Konfiguracja repositories
         if [ ! -d "modloop-modify/etc" ]; then
-          echo "⚠️ Katalog etc nie istnieje, tworzę podstawową strukturę..."
+          echo "⚠️ Tworzę strukturę etc..."
           mkdir -p modloop-modify/etc/apk
-          echo "https://dl-cdn.alpinelinux.org/alpine/${{ env.ALPINE_VERSION }}/main" > modloop-modify/etc/apk/repositories
-          echo "https://dl-cdn.alpinelinux.org/alpine/${{ env.ALPINE_VERSION }}/community" >> modloop-modify/etc/apk/repositories
         fi
         
-        # Sprawdzenie czy plik repositories istnieje przed modyfikacją
         if [ ! -f "modloop-modify/etc/apk/repositories" ]; then
-          echo "⚠️ Plik repositories nie istnieje, tworzę nowy..."
+          echo "⚠️ Tworzę plik repositories..."
           mkdir -p modloop-modify/etc/apk
           echo "https://dl-cdn.alpinelinux.org/alpine/${{ env.ALPINE_VERSION }}/main" > modloop-modify/etc/apk/repositories
           echo "https://dl-cdn.alpinelinux.org/alpine/${{ env.ALPINE_VERSION }}/community" >> modloop-modify/etc/apk/repositories
         fi
         
-        # Teraz bezpieczna modyfikacja
-        echo "📝 Konfigurowanie lokalnego repozytorium APK..."
+        # Dodanie lokalnego repo
         echo "/media/cdrom/apks" >> modloop-modify/etc/apk/repositories
-        
-        # NIE kopiujemy pakietu do modloop - będzie w głównym ISO
-        echo "⚠️ Pakiet zostanie umieszczony w głównym ISO, nie w modloop"
         
         echo "✅ Modloop zmodyfikowany"
 
@@ -301,94 +268,72 @@ jobs:
       run: |
         echo "🔨 Przebudowywanie modloop..."
         
-        # Znajdź oryginalną ścieżkę modloop
+        # Znajdź modloop ponownie
         MODLOOP_PATH=""
-        if [ -f "iso-contents/boot/modloop-standard" ]; then
-          MODLOOP_PATH="iso-contents/boot/modloop-standard"
-        elif [ -f "iso-contents/boot/x86_64/modloop-standard" ]; then
-          MODLOOP_PATH="iso-contents/boot/x86_64/modloop-standard"
-        elif [ -f "iso-contents/boot/modloop-lts" ]; then
+        if [ -f "iso-contents/boot/modloop-lts" ]; then
           MODLOOP_PATH="iso-contents/boot/modloop-lts"
+        elif [ -f "iso-contents/boot/modloop-standard" ]; then
+          MODLOOP_PATH="iso-contents/boot/modloop-standard"
         elif [ -f "iso-contents/boot/x86_64/modloop-lts" ]; then
           MODLOOP_PATH="iso-contents/boot/x86_64/modloop-lts"
+        elif [ -f "iso-contents/boot/x86_64/modloop-standard" ]; then
+          MODLOOP_PATH="iso-contents/boot/x86_64/modloop-standard"
         fi
         
-        echo "📦 Znaleziono modloop: $MODLOOP_PATH"
+        echo "📦 Przebudowywanie: $MODLOOP_PATH"
         
-        # Sprawdzenie uprawnień
-        echo "🔧 Sprawdzanie uprawnień..."
-        ls -la "$MODLOOP_PATH"
+        # Uprawnienia
+        sudo chown -R $USER:$USER iso-contents/
         
-        # Backup oryginalnego (z sudo)
-        sudo cp "$MODLOOP_PATH" "$MODLOOP_PATH.backup"
+        # Backup i rebuild
+        cp "$MODLOOP_PATH" "$MODLOOP_PATH.backup"
+        mksquashfs modloop-modify "$MODLOOP_PATH" -comp xz -noappend
         
-        # Tworzenie nowego modloop (tymczasowo)
-        mksquashfs modloop-modify modloop-new.squashfs -comp xz -noappend
-        
-        # Zastąpienie oryginalnego (z sudo)
-        sudo cp modloop-new.squashfs "$MODLOOP_PATH"
-        
-        # Sprzątanie
-        rm modloop-new.squashfs
-        
-        echo "✅ Nowy modloop utworzony"
+        echo "✅ Modloop przebudowany"
         ls -la "$MODLOOP_PATH"
 
     - name: Create custom ISO
       run: |
         echo "💿 Tworzenie niestandardowego ISO..."
         
-        # Sprawdzenie struktury ISO
-        echo "Struktura ISO:"
-        ls -la iso-contents/
-        
-        # Zmiana uprawnień na wszystkie pliki ISO
-        echo "🔧 Poprawianie uprawnień dla wszystkich plików ISO..."
-        sudo chmod -R 755 iso-contents/
-        sudo chown -R $USER:$USER iso-contents/
-        
-        # Znajdź katalog boot
-        BOOT_DIR=""
-        if [ -d "iso-contents/boot" ]; then
-          BOOT_DIR="iso-contents/boot"
-        else
-          echo "❌ Nie można znaleźć katalogu boot"
-          exit 1
-        fi
-        
-        # Dodanie naszego pakietu do głównego ISO
-        echo "📦 Dodawanie pakietu hardclone-cli do ISO..."
+        # Dodanie pakietu do głównego ISO
+        echo "📦 Dodawanie pakietu do ISO..."
         mkdir -p iso-contents/apks
         cp alpine-build/apks/hardclone-cli-*.apk iso-contents/apks/
         cp alpine-build/apks/APKINDEX.tar.gz iso-contents/apks/
+        cp alpine-build/apks/signing.pub iso-contents/apks/ 2>/dev/null || true
         
-        echo "✅ Pakiet dodany do ISO:"
+        echo "✅ Pakiet dodany:"
         ls -la iso-contents/apks/
         
-        # Sprawdzenie dostępnych bootloader'ów
+        # Poprawka uprawnień
+        sudo chmod -R 755 iso-contents/
+        sudo chown -R $USER:$USER iso-contents/
+        
+        # Znajdź bootloader
+        BOOT_DIR="iso-contents/boot"
+        OUTPUT_ISO="alpine-hardclone-${{ env.ALPINE_VERSION }}-${{ env.ALPINE_ARCH }}.iso"
+        
         echo "🔍 Sprawdzanie bootloader'ów:"
         find iso-contents/boot -name "*.bin" -type f 2>/dev/null || true
         
-        # Tworzenie ISO
-        OUTPUT_ISO="alpine-hardclone-${{ env.ALPINE_VERSION }}-${{ env.ALPINE_ARCH }}.iso"
-        
-        if [ -f "$BOOT_DIR/isolinux/isolinux.bin" ]; then
-          echo "🥾 Używam ISOLINUX boot"
-          genisoimage -r -J -b boot/isolinux/isolinux.bin -c boot/isolinux/boot.cat \
-                     -no-emul-boot -boot-load-size 4 -boot-info-table \
-                     -V "Alpine-HardClone" -o "$OUTPUT_ISO" iso-contents/
-        elif [ -f "$BOOT_DIR/syslinux/isolinux.bin" ]; then
-          echo "🥾 Używam SYSLINUX boot"
+        if [ -f "$BOOT_DIR/syslinux/isolinux.bin" ]; then
+          echo "🥾 Używam SYSLINUX"
           sudo genisoimage -r -J -b boot/syslinux/isolinux.bin -c boot/syslinux/boot.cat \
                      -no-emul-boot -boot-load-size 4 -boot-info-table \
                      -V "Alpine-HardClone" -o "$OUTPUT_ISO" iso-contents/
           sudo chown $USER:$USER "$OUTPUT_ISO"
+        elif [ -f "$BOOT_DIR/isolinux/isolinux.bin" ]; then
+          echo "🥾 Używam ISOLINUX"
+          genisoimage -r -J -b boot/isolinux/isolinux.bin -c boot/isolinux/boot.cat \
+                     -no-emul-boot -boot-load-size 4 -boot-info-table \
+                     -V "Alpine-HardClone" -o "$OUTPUT_ISO" iso-contents/
         else
-          echo "⚠️ Nie znaleziono bootloader'a, tworzę ISO bez boot"
+          echo "⚠️ Tworzę ISO bez bootloader'a"
           genisoimage -r -J -V "Alpine-HardClone" -o "$OUTPUT_ISO" iso-contents/
         fi
         
-        echo "✅ Niestandardowe ISO utworzone: $OUTPUT_ISO"
+        echo "✅ ISO utworzone: $OUTPUT_ISO"
         ls -la "$OUTPUT_ISO"
 
     - name: Upload ISO artifact
@@ -416,7 +361,8 @@ jobs:
           1. Pobierz plik ISO
           2. Nagraj na USB lub CD
           3. Uruchom z tego medium
-          4. Użyj `hardclone` w terminalu
+          4. Zainstaluj pakiet: `apk add --allow-untrusted /media/cdrom/apks/hardclone-cli-2.1.4-r0.apk`
+          5. Użyj: `hardclone --help`
         files: alpine-hardclone-*.iso
         draft: false
         prerelease: true
@@ -425,16 +371,15 @@ jobs:
     
     - name: Show build summary
       run: |
-        echo "🎉 Build completed successfully!"
+        echo "🎉 Build completed!"
         echo ""
-        echo "📋 Build Summary:"
-        echo "=================="
-        echo "🐧 Alpine Version: ${{ env.ALPINE_VERSION }}"
-        echo "🏗️ Architecture: ${{ env.ALPINE_ARCH }}"
+        echo "📋 Summary:"
+        echo "🐧 Alpine: ${{ env.ALPINE_VERSION }}"
+        echo "🏗️ Arch: ${{ env.ALPINE_ARCH }}"
         echo "📦 Package: hardclone-cli v2.1.4"
         echo ""
-        echo "📁 Generated files:"
-        ls -la alpine-hardclone-*.iso 2>/dev/null || echo "⚠️ No ISO files found"
+        echo "📁 Files:"
+        ls -la alpine-hardclone-*.iso 2>/dev/null || echo "⚠️ No ISO found"
         echo ""
-        echo "💡 ISO file is available as artifact even if release creation failed"
-        echo "💡 You can download it from the Actions tab"
+        echo "💡 To install package in Alpine:"
+        echo "   apk add --allow-untrusted /media/cdrom/apks/hardclone-cli-2.1.4-r0.apk"
