@@ -185,6 +185,11 @@ jobs:
           exit 1
         fi
         
+        # Generowanie klucza podpisywania (tymczasowy)
+        echo "🔐 Generowanie tymczasowego klucza podpisywania..."
+        openssl genrsa -out signing.key 2048
+        openssl rsa -in signing.key -pubout -out signing.pub
+        
         # Tworzenie prostego indeksu APKINDEX
         cat > APKINDEX << 'EOF'
         C:Q1/hardclone-cli-2.1.4-r0
@@ -206,9 +211,17 @@ jobs:
         # Kompresja indeksu
         tar -czf APKINDEX.tar.gz APKINDEX
         
-        echo "⚠️  Brak klucza, pomijam podpisywanie indeksu"
+        # Podpisanie indeksu (opcjonalne)
+        if command -v openssl >/dev/null 2>&1; then
+          echo "🔏 Podpisywanie indeksu..."
+          openssl dgst -sha1 -sign signing.key APKINDEX.tar.gz | openssl base64 > APKINDEX.tar.gz.sig
+          echo "✅ Indeks podpisany"
+        else
+          echo "⚠️  Brak OpenSSL, pomijam podpisywanie indeksu"
+        fi
+        
         echo "✅ Indeks repozytorium utworzony:"
-        ls -la APKINDEX.tar.gz
+        ls -la APKINDEX.tar.gz*
 
     - name: Download and prepare Alpine ISO
       run: |
