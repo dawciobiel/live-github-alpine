@@ -233,9 +233,15 @@ jobs:
           MODLOOP_PATH="iso-contents/boot/modloop-standard"
         elif [ -f "iso-contents/boot/x86_64/modloop-standard" ]; then
           MODLOOP_PATH="iso-contents/boot/x86_64/modloop-standard"
+        elif [ -f "iso-contents/boot/modloop-lts" ]; then
+          MODLOOP_PATH="iso-contents/boot/modloop-lts"
+        elif [ -f "iso-contents/boot/x86_64/modloop-lts" ]; then
+          MODLOOP_PATH="iso-contents/boot/x86_64/modloop-lts"
         else
-          echo "❌ Nie można znaleźć modloop-standard"
+          echo "❌ Nie można znaleźć modloop"
+          echo "Dostępne pliki w boot:"
           find iso-contents -name "*modloop*" -type f
+          find iso-contents/boot -type f 2>/dev/null || true
           exit 1
         fi
         
@@ -291,6 +297,10 @@ jobs:
           MODLOOP_PATH="iso-contents/boot/modloop-standard"
         elif [ -f "iso-contents/boot/x86_64/modloop-standard" ]; then
           MODLOOP_PATH="iso-contents/boot/x86_64/modloop-standard"
+        elif [ -f "iso-contents/boot/modloop-lts" ]; then
+          MODLOOP_PATH="iso-contents/boot/modloop-lts"
+        elif [ -f "iso-contents/boot/x86_64/modloop-lts" ]; then
+          MODLOOP_PATH="iso-contents/boot/x86_64/modloop-lts"
         fi
         
         # Backup oryginalnego
