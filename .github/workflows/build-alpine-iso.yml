@@ -15,7 +15,7 @@ env:
 jobs:
   build-iso:
     runs-on: ubuntu-latest
-    
+
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
@@ -114,31 +114,28 @@ jobs:
         cp hardclone/main.py pkg-temp/usr/bin/hardclone
         chmod +x pkg-temp/usr/bin/hardclone
 
-        APK_DIR="$(pwd)/../../../../apks"
-        mkdir -p "$APK_DIR"
+        mkdir -p ../../apks
         cd pkg-temp
-        tar -czf "$APK_DIR/hardclone-cli-2.1.4-r0.apk" *
+        tar -czf ../../apks/hardclone-cli-2.1.4-r0.apk *
 
         echo "✅ Pakiet hardclone-cli zbudowany"
 
     - name: Create APK repository index
       run: |
         cd alpine-build/apks
-        cat > APKINDEX << 'EOF'
-C:Q1/hardclone-cli-2.1.4-r0
-P:hardclone-cli
-V:2.1.4-r0
-A:x86_64
-S:1024
-I:2048
-T:Hardware cloning utility
-U:https://github.com/yourusername/hardclone-cli
-L:MIT
-o:hardclone-cli
-m:Your Name <your.email@example.com>
-t:1693353600
-c:Q1ABCD1234567890
-EOF
+        printf '%s\n' "C:Q1/hardclone-cli-2.1.4-r0" > APKINDEX
+        printf '%s\n' "P:hardclone-cli" >> APKINDEX
+        printf '%s\n' "V:2.1.4-r0" >> APKINDEX
+        printf '%s\n' "A:x86_64" >> APKINDEX
+        printf '%s\n' "S:1024" >> APKINDEX
+        printf '%s\n' "I:2048" >> APKINDEX
+        printf '%s\n' "T:Hardware cloning utility" >> APKINDEX
+        printf '%s\n' "U:https://github.com/yourusername/hardclone-cli" >> APKINDEX
+        printf '%s\n' "L:MIT" >> APKINDEX
+        printf '%s\n' "o:hardclone-cli" >> APKINDEX
+        printf '%s\n' "m:Your Name <your.email@example.com>" >> APKINDEX
+        printf '%s\n' "t:1693353600" >> APKINDEX
+        printf '%s\n' "c:Q1ABCD1234567890" >> APKINDEX
         tar -czf APKINDEX.tar.gz APKINDEX
         echo "✅ Indeks repozytorium utworzony"
 
