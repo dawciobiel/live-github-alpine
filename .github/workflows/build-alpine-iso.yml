@@ -53,54 +53,60 @@ jobs:
         cd hardclone-cli
         cp -r ../../../../* . 2>/dev/null || true
 
-        # Tworzenie APKBUILD za pomocą printf
-        printf '%s\n' \
-"# Maintainer: Your Name <your.email@example.com>" \
-"pkgname=hardclone-cli" \
-"pkgver=2.1.4" \
-"pkgrel=0" \
-'pkgdesc="Hardware cloning utility"' \
-'url="https://github.com/yourusername/hardclone-cli"' \
-'arch="all"' \
-'license="MIT"' \
-'depends="python3 py3-pip py3-dialog dialog"' \
-'makedepends="python3-dev py3-setuptools"' \
-'source="hardclone-cli-$pkgver.tar.gz"' \
-'builddir="$srcdir/hardclone-cli-$pkgver"' \
-'prepare() { default_prepare; }' \
-'build() { cd "$builddir"; python3 setup.py build; }' \
-'package() { cd "$builddir"; python3 setup.py install --root="$pkgdir" --optimize=1; }' \
-'sha512sums="SKIP"' \
-> APKBUILD
+        # Tworzenie APKBUILD
+        printf '%s\n' "# Maintainer: Your Name <your.email@example.com>" > APKBUILD
+        printf '%s\n' "pkgname=hardclone-cli" >> APKBUILD
+        printf '%s\n' "pkgver=2.1.4" >> APKBUILD
+        printf '%s\n' "pkgrel=0" >> APKBUILD
+        printf '%s\n' 'pkgdesc="Hardware cloning utility"' >> APKBUILD
+        printf '%s\n' 'url="https://github.com/yourusername/hardclone-cli"' >> APKBUILD
+        printf '%s\n' 'arch="all"' >> APKBUILD
+        printf '%s\n' 'license="MIT"' >> APKBUILD
+        printf '%s\n' 'depends="python3 py3-pip py3-dialog dialog"' >> APKBUILD
+        printf '%s\n' 'makedepends="python3-dev py3-setuptools"' >> APKBUILD
+        printf '%s\n' 'source="hardclone-cli-$pkgver.tar.gz"' >> APKBUILD
+        printf '%s\n' 'builddir="$srcdir/hardclone-cli-$pkgver"' >> APKBUILD
 
-        # Tworzenie setup.py za pomocą printf
-        printf '%s\n' \
-"from setuptools import setup, find_packages" \
-"" \
-"setup(" \
-"    name='hardclone-cli'," \
-"    version='2.1.4'," \
-"    packages=find_packages()," \
-"    install_requires=[]," \
-"    entry_points={" \
-"        'console_scripts': [" \
-"            'hardclone=hardclone.main:main'," \
-"        ]," \
-"    }," \
-")" \
-> setup.py
+        printf '%s\n' "prepare() {" >> APKBUILD
+        printf '%s\n' "    default_prepare" >> APKBUILD
+        printf '%s\n' "}" >> APKBUILD
+
+        printf '%s\n' "build() {" >> APKBUILD
+        printf '%s\n' '    cd "$builddir"' >> APKBUILD
+        printf '%s\n' '    python3 setup.py build' >> APKBUILD
+        printf '%s\n' "}" >> APKBUILD
+
+        printf '%s\n' "package() {" >> APKBUILD
+        printf '%s\n' '    cd "$builddir"' >> APKBUILD
+        printf '%s\n' '    python3 setup.py install --root="$pkgdir" --optimize=1' >> APKBUILD
+        printf '%s\n' "}" >> APKBUILD
+
+        printf '%s\n' 'sha512sums="SKIP"' >> APKBUILD
+
+        # Tworzenie setup.py
+        printf '%s\n' "from setuptools import setup, find_packages" > setup.py
+        printf '%s\n' "" >> setup.py
+        printf '%s\n' "setup(" >> setup.py
+        printf '%s\n' '    name="hardclone-cli",' >> setup.py
+        printf '%s\n' '    version="2.1.4",' >> setup.py
+        printf '%s\n' '    packages=find_packages(),' >> setup.py
+        printf '%s\n' '    install_requires=[],' >> setup.py
+        printf '%s\n' '    entry_points={' >> setup.py
+        printf '%s\n' "        'console_scripts': [" >> setup.py
+        printf '%s\n' "            'hardclone=hardclone.main:main'," >> setup.py
+        printf '%s\n' "        ]," >> setup.py
+        printf '%s\n' "    }," >> setup.py
+        printf '%s\n' ")" >> setup.py
 
         # Tworzenie demo struktury pakietu
         mkdir -p hardclone
         touch hardclone/__init__.py
-        printf '%s\n' \
-"def main():" \
-'    print("hardclone-cli v2.1.4 - Hardware cloning utility")' \
-'    print("This is a demo version")' \
-"" \
-'if __name__ == "__main__":' \
-'    main()' \
-> hardclone/main.py
+        printf '%s\n' "def main():" > hardclone/main.py
+        printf '%s\n' '    print("hardclone-cli v2.1.4 - Hardware cloning utility")' >> hardclone/main.py
+        printf '%s\n' '    print("This is a demo version")' >> hardclone/main.py
+        printf '%s\n' "" >> hardclone/main.py
+        printf '%s\n' 'if __name__ == "__main__":' >> hardclone/main.py
+        printf '%s\n' '    main()' >> hardclone/main.py
 
         # Tworzenie archiwum źródłowego
         cd ..
@@ -121,21 +127,19 @@ jobs:
     - name: Create APK repository index
       run: |
         cd alpine-build/apks
-        printf '%s\n' \
-"C:Q1/hardclone-cli-2.1.4-r0" \
-"P:hardclone-cli" \
-"V:2.1.4-r0" \
-"A:x86_64" \
-"S:1024" \
-"I:2048" \
-"T:Hardware cloning utility" \
-"U:https://github.com/yourusername/hardclone-cli" \
-"L:MIT" \
-"o:hardclone-cli" \
-"m:Your Name <your.email@example.com>" \
-"t:1693353600" \
-"c:Q1ABCD1234567890" \
-> APKINDEX
+        printf '%s\n' "C:Q1/hardclone-cli-2.1.4-r0" > APKINDEX
+        printf '%s\n' "P:hardclone-cli" >> APKINDEX
+        printf '%s\n' "V:2.1.4-r0" >> APKINDEX
+        printf '%s\n' "A:x86_64" >> APKINDEX
+        printf '%s\n' "S:1024" >> APKINDEX
+        printf '%s\n' "I:2048" >> APKINDEX
+        printf '%s\n' "T:Hardware cloning utility" >> APKINDEX
+        printf '%s\n' "U:https://github.com/yourusername/hardclone-cli" >> APKINDEX
+        printf '%s\n' "L:MIT" >> APKINDEX
+        printf '%s\n' "o:hardclone-cli" >> APKINDEX
+        printf '%s\n' "m:Your Name <your.email@example.com>" >> APKINDEX
+        printf '%s\n' "t:1693353600" >> APKINDEX
+        printf '%s\n' "c:Q1ABCD1234567890" >> APKINDEX
         tar -czf APKINDEX.tar.gz APKINDEX
         echo "✅ Indeks repozytorium utworzony"
 
