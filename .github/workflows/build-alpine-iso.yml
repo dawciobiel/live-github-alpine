@@ -348,6 +348,11 @@ jobs:
         echo "Struktura ISO:"
         ls -la iso-contents/
         
+        # Zmiana uprawnień na wszystkie pliki ISO
+        echo "🔧 Poprawianie uprawnień dla wszystkich plików ISO..."
+        sudo chmod -R 755 iso-contents/
+        sudo chown -R $USER:$USER iso-contents/
+        
         # Znajdź katalog boot
         BOOT_DIR=""
         if [ -d "iso-contents/boot" ]; then
@@ -357,21 +362,25 @@ jobs:
           exit 1
         fi
         
+        # Sprawdzenie dostępnych bootloader'ów
+        echo "🔍 Sprawdzanie bootloader'ów:"
+        find iso-contents/boot -name "*.bin" -type f 2>/dev/null || true
+        
         # Tworzenie ISO
         OUTPUT_ISO="alpine-hardclone-${{ env.ALPINE_VERSION }}-${{ env.ALPINE_ARCH }}.iso"
         
         if [ -f "$BOOT_DIR/isolinux/isolinux.bin" ]; then
-          # ISOLINUX boot
+          echo "🥾 Używam ISOLINUX boot"
           genisoimage -r -J -b boot/isolinux/isolinux.bin -c boot/isolinux/boot.cat \
                      -no-emul-boot -boot-load-size 4 -boot-info-table \
                      -V "Alpine-HardClone" -o "$OUTPUT_ISO" iso-contents/
         elif [ -f "$BOOT_DIR/syslinux/isolinux.bin" ]; then
-          # SYSLINUX boot
-          genisoimage -r -J -b boot/syslinux/isolinux.bin -c boot/syslinux/boot.cat \
+          echo "🥾 Używam SYSLINUX boot"
+          sudo genisoimage -r -J -b boot/syslinux/isolinux.bin -c boot/syslinux/boot.cat \
                      -no-emul-boot -boot-load-size 4 -boot-info-table \
                      -V "Alpine-HardClone" -o "$OUTPUT_ISO" iso-contents/
+          sudo chown $USER:$USER "$OUTPUT_ISO"
         else
-          # Próba bez bootloader'a
           echo "⚠️ Nie znaleziono bootloader'a, tworzę ISO bez boot"
           genisoimage -r -J -V "Alpine-HardClone" -o "$OUTPUT_ISO" iso-contents/
         fi
