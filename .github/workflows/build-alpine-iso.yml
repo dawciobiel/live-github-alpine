@@ -114,9 +114,12 @@ jobs:
         cp hardclone/main.py pkg-temp/usr/bin/hardclone
         chmod +x pkg-temp/usr/bin/hardclone
 
-        mkdir -p ../../apks
+        APKS_DIR="$GITHUB_WORKSPACE/alpine-build/apks"
+        mkdir -p "$APKS_DIR"
+        
         cd pkg-temp
-        tar -czf ../../apks/hardclone-cli-2.1.4-r0.apk *
+        tar -czf "$APKS_DIR/hardclone-cli-2.1.4-r0.apk" *
+
 
         echo "✅ Pakiet hardclone-cli zbudowany"
 
