@@ -14,6 +14,9 @@ env:
 jobs:
   build-iso:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      packages: write
     
     steps:
     - name: Checkout repository
@@ -396,11 +399,7 @@ jobs:
         retention-days: 7
 
     - name: Create release
-    permissions:
-      contents: write
-
       if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-      continue-on-error: true
       uses: softprops/action-gh-release@v1
       with:
         tag_name: auto-${{ github.run_number }}
