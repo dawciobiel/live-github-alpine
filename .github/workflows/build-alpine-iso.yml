@@ -124,23 +124,22 @@ jobs:
     - name: Create APK repository index
       run: |
         cd alpine-build/apks
-        cat > APKINDEX << 'EOF'
-C:Q1/hardclone-cli-2.1.4-r0
-P:hardclone-cli
-V:2.1.4-r0
-A:x86_64
-S:1024
-I:2048
-T:Hardware cloning utility
-U:https://github.com/dawciobiel/hardclone-cli
-L:MIT
-o:hardclone-cli
-m:Dawid Bielecki <dawciobiel@gmail.com>
-t:1693353600
-c:Q1ABCD1234567890
-EOF
+        printf '%s\n' "C:Q1/hardclone-cli-2.1.4-r0" > APKINDEX
+        printf '%s\n' "P:hardclone-cli" >> APKINDEX
+        printf '%s\n' "V:2.1.4-r0" >> APKINDEX
+        printf '%s\n' "A:x86_64" >> APKINDEX
+        printf '%s\n' "S:1024" >> APKINDEX
+        printf '%s\n' "I:2048" >> APKINDEX
+        printf '%s\n' "T:Hardware cloning utility" >> APKINDEX
+        printf '%s\n' "U:https://github.com/dawciobiel/hardclone-cli" >> APKINDEX
+        printf '%s\n' "L:MIT" >> APKINDEX
+        printf '%s\n' "o:hardclone-cli" >> APKINDEX
+        printf '%s\n' "m:Dawid Bielecki <dawciobiel@gmail.com>" >> APKINDEX
+        printf '%s\n' "t:1693353600" >> APKINDEX
+        printf '%s\n' "c:Q1ABCD1234567890" >> APKINDEX
         tar -czf APKINDEX.tar.gz APKINDEX
         echo "✅ Indeks repozytorium utworzony"
+
 
     - name: Download and prepare Alpine ISO
       run: |
