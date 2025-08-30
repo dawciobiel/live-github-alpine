@@ -15,7 +15,7 @@ env:
 jobs:
   build-iso:
     runs-on: ubuntu-latest
-    
+
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
@@ -54,7 +54,7 @@ jobs:
         cp -r ../../../../* . 2>/dev/null || true
 
         # Tworzenie APKBUILD
-        printf '%s\n' "# Maintainer: Your Name <your.email@example.com>" > APKBUILD
+        printf '%s\n' "# Maintainer: Dawid Bielecki <dawciobiel@gmail.com>" > APKBUILD
         printf '%s\n' "pkgname=hardclone-cli" >> APKBUILD
         printf '%s\n' "pkgver=2.1.4" >> APKBUILD
         printf '%s\n' "pkgrel=0" >> APKBUILD
@@ -114,28 +114,31 @@ jobs:
         cp hardclone/main.py pkg-temp/usr/bin/hardclone
         chmod +x pkg-temp/usr/bin/hardclone
 
-        mkdir -p ../../apks
+        APK_OUTPUT_DIR="$(pwd)/../../../apks"
+        mkdir -p "$APK_OUTPUT_DIR"
         cd pkg-temp
-        tar -czf ../../apks/hardclone-cli-2.1.4-r0.apk *
+        tar -czf "$APK_OUTPUT_DIR/hardclone-cli-2.1.4-r0.apk" *
 
         echo "✅ Pakiet hardclone-cli zbudowany"
 
     - name: Create APK repository index
       run: |
         cd alpine-build/apks
-        printf '%s\n' "C:Q1/hardclone-cli-2.1.4-r0" > APKINDEX
-        printf '%s\n' "P:hardclone-cli" >> APKINDEX
-        printf '%s\n' "V:2.1.4-r0" >> APKINDEX
-        printf '%s\n' "A:x86_64" >> APKINDEX
-        printf '%s\n' "S:1024" >> APKINDEX
-        printf '%s\n' "I:2048" >> APKINDEX
-        printf '%s\n' "T:Hardware cloning utility" >> APKINDEX
-        printf '%s\n' "U:https://github.com/yourusername/hardclone-cli" >> APKINDEX
-        printf '%s\n' "L:MIT" >> APKINDEX
-        printf '%s\n' "o:hardclone-cli" >> APKINDEX
-        printf '%s\n' "m:Your Name <your.email@example.com>" >> APKINDEX
-        printf '%s\n' "t:1693353600" >> APKINDEX
-        printf '%s\n' "c:Q1ABCD1234567890" >> APKINDEX
+        cat > APKINDEX << 'EOF'
+C:Q1/hardclone-cli-2.1.4-r0
+P:hardclone-cli
+V:2.1.4-r0
+A:x86_64
+S:1024
+I:2048
+T:Hardware cloning utility
+U:https://github.com/dawciobiel/hardclone-cli
+L:MIT
+o:hardclone-cli
+m:Dawid Bielecki <dawciobiel@gmail.com>
+t:1693353600
+c:Q1ABCD1234567890
+EOF
         tar -czf APKINDEX.tar.gz APKINDEX
         echo "✅ Indeks repozytorium utworzony"
 
@@ -155,7 +158,7 @@ jobs:
         sudo umount /mnt
         sudo chown -R $USER:$USER iso-contents
 
-    - name: Modify and rebuild modloop
+    - name: Modify modloop
       run: |
         MODLOOP_PATH=""
         if [ -f "iso-contents/boot/modloop-standard" ]; then
@@ -172,20 +175,32 @@ jobs:
           exit 1
         fi
 
-        echo "📦 Unpacking modloop from: $MODLOOP_PATH"
         mkdir -p modloop-modify
         unsquashfs -d modloop-modify "$MODLOOP_PATH"
 
-        sudo mkdir -p modloop-modify/etc/apk
-        echo "https://dl-cdn.alpinelinux.org/alpine/${{ env.ALPINE_BRANCH }}/main" | sudo tee modloop-modify/etc/apk/repositories
-        echo "https://dl-cdn.alpinelinux.org/alpine/${{ env.ALPINE_BRANCH }}/community" | sudo tee -a modloop-modify/etc/apk/repositories
-        echo "/apks" | sudo tee -a modloop-modify/etc/apk/repositories
+        mkdir -p modloop-modify/etc/apk
+        echo "https://dl-cdn.alpinelinux.org/alpine/${{ env.ALPINE_BRANCH }}/main" > modloop-modify/etc/apk/repositories
+        echo "https://dl-cdn.alpinelinux.org/alpine/${{ env.ALPINE_BRANCH }}/community" >> modloop-modify/etc/apk/repositories
+        echo "/apks" >> modloop-modify/etc/apk/repositories
 
-        sudo mkdir -p modloop-modify/apks
-        sudo cp alpine-build/apks/hardclone-cli-*.apk modloop-modify/apks/
-        sudo cp alpine-build/apks/APKINDEX.tar.gz modloop-modify/apks/
+        mkdir -p modloop-modify/apks
+        cp alpine-build/apks/hardclone-cli-*.apk modloop-modify/apks/
+        cp alpine-build/apks/APKINDEX.tar.gz modloop-modify/apks/
 
         echo "✅ Modloop modified"
+
+    - name: Rebuild modloop
+      run: |
+        MODLOOP_PATH=""
+        if [ -f "iso-contents/boot/modloop-standard" ]; then
+          MODLOOP_PATH="iso-contents/boot/modloop-standard"
+        elif [ -f "iso-contents/boot/modloop-lts" ]; then
+          MODLOOP_PATH="iso-contents/boot/modloop-lts"
+        elif [ -f "iso-contents/boot/x86_64/modloop-standard" ]; then
+          MODLOOP_PATH="iso-contents/boot/x86_64/modloop-standard"
+        elif [ -f "iso-contents/boot/x86_64/modloop-lts" ]; then
+          MODLOOP_PATH="iso-contents/boot/x86_64/modloop-lts"
+        fi
 
         sudo cp "$MODLOOP_PATH" "$MODLOOP_PATH.backup"
         sudo mksquashfs modloop-modify "$MODLOOP_PATH" -comp xz -noappend
@@ -203,16 +218,4 @@ jobs:
         elif [ -f "$BOOT_DIR/syslinux/isolinux.bin" ]; then
           genisoimage -r -J -b boot/syslinux/isolinux.bin -c boot/syslinux/boot.cat \
             -no-emul-boot -boot-load-size 4 -boot-info-table \
-            -V "Alpine-HardClone" -o "$OUTPUT_ISO" iso-contents/
-        else
-          genisoimage -r -J -V "Alpine-HardClone" -o "$OUTPUT_ISO" iso-contents/
-        fi
-
-        echo "✅ Niestandardowe ISO utworzone: $OUTPUT_ISO"
-
-    - name: Upload ISO artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: alpine-hardclone-iso
-        path: alpine-hardclone-*.iso
-        retention-days: 7
+            -V "Alpine-Hard
