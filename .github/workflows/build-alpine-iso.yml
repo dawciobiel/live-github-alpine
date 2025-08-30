@@ -297,12 +297,10 @@ jobs:
         
         # Teraz bezpieczna modyfikacja
         echo "📝 Konfigurowanie lokalnego repozytorium APK..."
-        echo "/apks" >> modloop-modify/etc/apk/repositories
+        echo "/media/cdrom/apks" >> modloop-modify/etc/apk/repositories
         
-        # Kopiowanie naszego pakietu
-        mkdir -p modloop-modify/apks
-        cp alpine-build/apks/hardclone-cli-*.apk modloop-modify/apks/
-        cp alpine-build/apks/APKINDEX.tar.gz modloop-modify/apks/
+        # NIE kopiujemy pakietu do modloop - będzie w głównym ISO
+        echo "⚠️ Pakiet zostanie umieszczony w głównym ISO, nie w modloop"
         
         echo "✅ Modloop zmodyfikowany"
 
@@ -364,6 +362,15 @@ jobs:
           echo "❌ Nie można znaleźć katalogu boot"
           exit 1
         fi
+        
+        # Dodanie naszego pakietu do głównego ISO
+        echo "📦 Dodawanie pakietu hardclone-cli do ISO..."
+        mkdir -p iso-contents/apks
+        cp alpine-build/apks/hardclone-cli-*.apk iso-contents/apks/
+        cp alpine-build/apks/APKINDEX.tar.gz iso-contents/apks/
+        
+        echo "✅ Pakiet dodany do ISO:"
+        ls -la iso-contents/apks/
         
         # Sprawdzenie dostępnych bootloader'ów
         echo "🔍 Sprawdzanie bootloader'ów:"
