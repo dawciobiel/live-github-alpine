@@ -14,6 +14,7 @@ env:
   APK_NAME: "hardclone-cli"
   APK_VER: "2.1.4"
   APK_REL: "r0"
+  APK_DIR: "${{ github.workspace }}/alpine-build/apks"
 
 jobs:
   build-iso:
@@ -52,7 +53,7 @@ jobs:
     - name: Build hardclone-cli package
       run: |
         SRC_DIR="$(pwd)/alpine-build/src"
-        APK_DIR="$(pwd)/alpine-build/apks"
+        APK_DIR="${{ env.APK_DIR }}"
 
         mkdir -p "$SRC_DIR/$APK_NAME"
         cd "$SRC_DIR/$APK_NAME"
@@ -98,15 +99,16 @@ jobs:
         printf '%s\n' "build() { cd \"\$builddir\"; python3 setup.py build }" >> APKBUILD
         printf '%s\n' "package() { cd \"\$builddir\"; python3 setup.py install --root=\"\$pkgdir\" --optimize=1 }" >> APKBUILD
         printf '%s\n' 'sha512sums="SKIP"' >> APKBUILD
-
+        
         # Tworzymy archiwum źródłowe
         cd ..
         tar -czf "$APK_DIR/$APK_NAME-$APK_VER.tar.gz" "$APK_NAME"
-
+        
         # Symulujemy budowanie APK
         mkdir -p pkg-temp/usr/bin
         cp "$APK_NAME/hardclone/main.py" pkg-temp/usr/bin/hardclone
         chmod +x pkg-temp/usr/bin/hardclone
+        
         tar -czf "$APK_DIR/$APK_NAME-$APK_VER-$APK_REL.apk" -C pkg-temp .
 
         echo "✅ Pakiet hardclone-cli zbudowany"
@@ -114,7 +116,7 @@ jobs:
 
     - name: Create APK repository index
       run: |
-        APK_DIR="$(pwd)/alpine-build/apks"
+        APK_DIR="${{ env.APK_DIR }}"
         cd "$APK_DIR"
         printf '%s\n' "C:Q1/$APK_NAME-$APK_VER-$APK_REL" > APKINDEX
         printf '%s\n' "P:$APK_NAME" >> APKINDEX
@@ -148,7 +150,6 @@ jobs:
         sudo cp -r /mnt/* iso-contents/
         sudo umount /mnt
         sudo chown -R $USER:$USER iso-contents
-        echo "✅ ISO zawartość wypakowana"
 
     - name: Modify modloop
       run: |
@@ -173,27 +174,13 @@ jobs:
         mkdir -p modloop-modify/etc/apk
         echo "https://dl-cdn.alpinelinux.org/alpine/${{ env.ALPINE_BRANCH }}/main" > modloop-modify/etc/apk/repositories
         echo "https://dl-cdn.alpinelinux.org/alpine/${{ env.ALPINE_BRANCH }}/community" >> modloop-modify/etc/apk/repositories
-        echo "file:///apks" >> modloop-modify/etc/apk/repositories
+        echo "${{ env.APK_DIR }}" >> modloop-modify/etc/apk/repositories
 
         mkdir -p modloop-modify/apks
-        cp ../../alpine-build/apks/*.apk modloop-modify/apks/
-        cp ../../alpine-build/apks/APKINDEX.tar.gz modloop-modify/apks/
+        cp "${{ env.APK_DIR }}"/*.apk modloop-modify/apks/
+        cp "${{ env.APK_DIR }}/APKINDEX.tar.gz" modloop-modify/apks/
 
-        sudo mksquashfs modloop-modify "$MODLOOP_PATH" -comp xz -noappend
-        echo "✅ Modloop zmodyfikowany"
-
-    - name: Repack ISO
-      run: |
-        xorriso -as mkisofs \
-          -o artifacts/alpine/alpine-custom.iso \
-          -isohybrid-mbr /usr/lib/ISOLINUX/isohdpfx.bin \
-          -c isolinux/boot.cat \
-          -b isolinux/isolinux.bin \
-          -no-emul-boot \
-          -boot-load-size 4 \
-          -boot-info-table \
-          iso-contents/
-        echo "✅ Custom Alpine ISO utworzony"
+        echo "✅ Modloop modified"
 
     - name: Upload Alpine APKs artifact
       uses: actions/upload-artifact@v4
