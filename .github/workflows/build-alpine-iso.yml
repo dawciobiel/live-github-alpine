@@ -176,3 +176,21 @@ jobs:
         echo "/alpine-build/apks" >> modloop-modify/etc/apk/repositories
 
         mkdir -
+
+    - name: Ensure artifacts directories exist
+      run: |
+        mkdir -p alpine-build/apks
+        mkdir -p artifacts/alpine
+
+    - name: Upload Alpine APKs artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: alpine-apks
+        path: alpine-build/apks
+
+    - name: Upload custom Alpine ISO
+      uses: actions/upload-artifact@v4
+      with:
+        name: alpine-iso
+        path: artifacts/alpine/*.iso
+
