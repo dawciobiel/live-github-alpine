@@ -198,7 +198,7 @@ jobs:
         cd iso-download
         
         # Pobieranie standardowego Alpine ISO
-        ISO_URL="https://dl-cdn.alpinelinux.org/alpine/${{ env.ALPINE_VERSION }}/releases/${{ env.ALPINE_ARCH }}/alpine-standard-${{ env.ALPINE_VERSION }}.0-${{ env.ALPINE_ARCH }}.iso"
+        ISO_URL="https://dl-cdn.alpinelinux.org/alpine/${{ env.ALPINE_VERSION }}/releases/${{ env.ALPINE_ARCH }}/alpine-standard-3.18.0-${{ env.ALPINE_ARCH }}.iso"
         
         echo "Pobieranie z: $ISO_URL"
         if ! wget -O alpine-standard.iso "$ISO_URL"; then
