@@ -15,7 +15,7 @@ env:
 jobs:
   build-iso:
     runs-on: ubuntu-latest
-
+    
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
@@ -114,12 +114,9 @@ jobs:
         cp hardclone/main.py pkg-temp/usr/bin/hardclone
         chmod +x pkg-temp/usr/bin/hardclone
 
-        APKS_DIR="$GITHUB_WORKSPACE/alpine-build/apks"
-        mkdir -p "$APKS_DIR"
-        
+        mkdir -p ../../apks
         cd pkg-temp
-        tar -czf "$APKS_DIR/hardclone-cli-2.1.4-r0.apk" *
-
+        tar -czf ../../apks/hardclone-cli-2.1.4-r0.apk *
 
         echo "✅ Pakiet hardclone-cli zbudowany"
 
@@ -158,7 +155,7 @@ jobs:
         sudo umount /mnt
         sudo chown -R $USER:$USER iso-contents
 
-    - name: Modify modloop
+    - name: Modify and rebuild modloop
       run: |
         MODLOOP_PATH=""
         if [ -f "iso-contents/boot/modloop-standard" ]; then
@@ -175,35 +172,23 @@ jobs:
           exit 1
         fi
 
+        echo "📦 Unpacking modloop from: $MODLOOP_PATH"
         mkdir -p modloop-modify
         unsquashfs -d modloop-modify "$MODLOOP_PATH"
 
-        mkdir -p modloop-modify/etc/apk
-        echo "https://dl-cdn.alpinelinux.org/alpine/${{ env.ALPINE_BRANCH }}/main" > modloop-modify/etc/apk/repositories
-        echo "https://dl-cdn.alpinelinux.org/alpine/${{ env.ALPINE_BRANCH }}/community" >> modloop-modify/etc/apk/repositories
-        echo "/apks" >> modloop-modify/etc/apk/repositories
+        sudo mkdir -p modloop-modify/etc/apk
+        echo "https://dl-cdn.alpinelinux.org/alpine/${{ env.ALPINE_BRANCH }}/main" | sudo tee modloop-modify/etc/apk/repositories
+        echo "https://dl-cdn.alpinelinux.org/alpine/${{ env.ALPINE_BRANCH }}/community" | sudo tee -a modloop-modify/etc/apk/repositories
+        echo "/apks" | sudo tee -a modloop-modify/etc/apk/repositories
 
-        mkdir -p modloop-modify/apks
-        cp alpine-build/apks/hardclone-cli-*.apk modloop-modify/apks/
-        cp alpine-build/apks/APKINDEX.tar.gz modloop-modify/apks/
+        sudo mkdir -p modloop-modify/apks
+        sudo cp alpine-build/apks/hardclone-cli-*.apk modloop-modify/apks/
+        sudo cp alpine-build/apks/APKINDEX.tar.gz modloop-modify/apks/
 
         echo "✅ Modloop modified"
 
-    - name: Rebuild modloop
-      run: |
-        MODLOOP_PATH=""
-        if [ -f "iso-contents/boot/modloop-standard" ]; then
-          MODLOOP_PATH="iso-contents/boot/modloop-standard"
-        elif [ -f "iso-contents/boot/modloop-lts" ]; then
-          MODLOOP_PATH="iso-contents/boot/modloop-lts"
-        elif [ -f "iso-contents/boot/x86_64/modloop-standard" ]; then
-          MODLOOP_PATH="iso-contents/boot/x86_64/modloop-standard"
-        elif [ -f "iso-contents/boot/x86_64/modloop-lts" ]; then
-          MODLOOP_PATH="iso-contents/boot/x86_64/modloop-lts"
-        fi
-
-        cp "$MODLOOP_PATH" "$MODLOOP_PATH.backup"
-        mksquashfs modloop-modify "$MODLOOP_PATH" -comp xz -noappend
+        sudo cp "$MODLOOP_PATH" "$MODLOOP_PATH.backup"
+        sudo mksquashfs modloop-modify "$MODLOOP_PATH" -comp xz -noappend
         echo "✅ Nowy modloop utworzony"
 
     - name: Create custom ISO
