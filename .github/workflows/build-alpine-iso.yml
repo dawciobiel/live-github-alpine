@@ -59,56 +59,52 @@ jobs:
         mkdir -p pkg/usr/bin
         
         # Tworzenie skryptu hardclone
-        cat > pkg/usr/bin/hardclone << 'EOF'
-#!/bin/sh
-echo "hardclone-cli v2.1.4 - Hardware cloning utility"
-echo "This is a demo version for Alpine Linux"
-echo ""
-echo "Usage: hardclone [options]"
-echo "  --help    Show this help"
-echo "  --version Show version"
-echo ""
-echo "Demo commands available:"
-echo "  hardclone --disk-info    Show disk information"
-echo "  hardclone --list-drives  List available drives"
-
-case "$1" in
-  --help|-h)
-    echo "Help displayed above"
-    ;;
-  --version|-v)
-    echo "hardclone-cli v2.1.4"
-    ;;
-  --disk-info)
-    echo "=== Disk Information ==="
-    lsblk 2>/dev/null || echo "lsblk not available"
-    ;;
-  --list-drives)
-    echo "=== Available Drives ==="
-    ls -la /dev/sd* /dev/nvme* 2>/dev/null || echo "No drives found"
-    ;;
-  *)
-    echo "Use --help for available options"
-    ;;
-esac
-EOF
+        printf '#!/bin/sh\n' > pkg/usr/bin/hardclone
+        printf 'echo "hardclone-cli v2.1.4 - Hardware cloning utility"\n' >> pkg/usr/bin/hardclone
+        printf 'echo "This is a demo version for Alpine Linux"\n' >> pkg/usr/bin/hardclone
+        printf 'echo ""\n' >> pkg/usr/bin/hardclone
+        printf 'echo "Usage: hardclone [options]"\n' >> pkg/usr/bin/hardclone
+        printf 'echo "  --help    Show this help"\n' >> pkg/usr/bin/hardclone
+        printf 'echo "  --version Show version"\n' >> pkg/usr/bin/hardclone
+        printf 'echo ""\n' >> pkg/usr/bin/hardclone
+        printf 'echo "Demo commands available:"\n' >> pkg/usr/bin/hardclone
+        printf 'echo "  hardclone --disk-info    Show disk information"\n' >> pkg/usr/bin/hardclone
+        printf 'echo "  hardclone --list-drives  List available drives"\n' >> pkg/usr/bin/hardclone
+        printf 'echo ""\n' >> pkg/usr/bin/hardclone
+        printf 'case "$1" in\n' >> pkg/usr/bin/hardclone
+        printf '  --help|-h)\n' >> pkg/usr/bin/hardclone
+        printf '    echo "Help displayed above"\n' >> pkg/usr/bin/hardclone
+        printf '    ;;\n' >> pkg/usr/bin/hardclone
+        printf '  --version|-v)\n' >> pkg/usr/bin/hardclone
+        printf '    echo "hardclone-cli v2.1.4"\n' >> pkg/usr/bin/hardclone
+        printf '    ;;\n' >> pkg/usr/bin/hardclone
+        printf '  --disk-info)\n' >> pkg/usr/bin/hardclone
+        printf '    echo "=== Disk Information ==="\n' >> pkg/usr/bin/hardclone
+        printf '    lsblk 2>/dev/null || echo "lsblk not available"\n' >> pkg/usr/bin/hardclone
+        printf '    ;;\n' >> pkg/usr/bin/hardclone
+        printf '  --list-drives)\n' >> pkg/usr/bin/hardclone
+        printf '    echo "=== Available Drives ==="\n' >> pkg/usr/bin/hardclone
+        printf '    ls -la /dev/sd* /dev/nvme* 2>/dev/null || echo "No drives found"\n' >> pkg/usr/bin/hardclone
+        printf '    ;;\n' >> pkg/usr/bin/hardclone
+        printf '  *)\n' >> pkg/usr/bin/hardclone
+        printf '    echo "Use --help for available options"\n' >> pkg/usr/bin/hardclone
+        printf '    ;;\n' >> pkg/usr/bin/hardclone
+        printf 'esac\n' >> pkg/usr/bin/hardclone
         
         chmod +x pkg/usr/bin/hardclone
         
-        # Tworzenie .PKGINFO jako PLIK (nie katalog!)
-        cat > pkg/.PKGINFO << 'EOF'
-pkgname = hardclone-cli
-pkgver = 2.1.4-r0
-pkgdesc = Hardware cloning utility
-url = https://github.com/yourusername/hardclone-cli
-builddate = 1693353600
-packager = Auto Builder <builder@example.com>
-size = 2048
-arch = x86_64
-origin = hardclone-cli
-commit = demo123
-maintainer = Auto Builder <builder@example.com>
-EOF
+        # Tworzenie .PKGINFO jako PLIK
+        printf 'pkgname = hardclone-cli\n' > pkg/.PKGINFO
+        printf 'pkgver = 2.1.4-r0\n' >> pkg/.PKGINFO
+        printf 'pkgdesc = Hardware cloning utility\n' >> pkg/.PKGINFO
+        printf 'url = https://github.com/yourusername/hardclone-cli\n' >> pkg/.PKGINFO
+        printf 'builddate = 1693353600\n' >> pkg/.PKGINFO
+        printf 'packager = Auto Builder <builder@example.com>\n' >> pkg/.PKGINFO
+        printf 'size = 2048\n' >> pkg/.PKGINFO
+        printf 'arch = x86_64\n' >> pkg/.PKGINFO
+        printf 'origin = hardclone-cli\n' >> pkg/.PKGINFO
+        printf 'commit = demo123\n' >> pkg/.PKGINFO
+        printf 'maintainer = Auto Builder <builder@example.com>\n' >> pkg/.PKGINFO
         
         # Tworzenie właściwego pakietu APK
         cd pkg
@@ -154,22 +150,20 @@ EOF
         openssl rsa -in signing.key -pubout -out signing.pub
         
         # Tworzenie APKINDEX
-        cat > APKINDEX << 'EOF'
-C:Q1/hardclone-cli-2.1.4-r0
-P:hardclone-cli
-V:2.1.4-r0
-A:x86_64
-S:1024
-I:2048
-T:Hardware cloning utility
-U:https://github.com/yourusername/hardclone-cli
-L:MIT
-o:hardclone-cli
-m:Auto Builder <builder@example.com>
-t:1693353600
-c:Q1ABCD1234567890
-
-EOF
+        printf 'C:Q1/hardclone-cli-2.1.4-r0\n' > APKINDEX
+        printf 'P:hardclone-cli\n' >> APKINDEX
+        printf 'V:2.1.4-r0\n' >> APKINDEX
+        printf 'A:x86_64\n' >> APKINDEX
+        printf 'S:1024\n' >> APKINDEX
+        printf 'I:2048\n' >> APKINDEX
+        printf 'T:Hardware cloning utility\n' >> APKINDEX
+        printf 'U:https://github.com/yourusername/hardclone-cli\n' >> APKINDEX
+        printf 'L:MIT\n' >> APKINDEX
+        printf 'o:hardclone-cli\n' >> APKINDEX
+        printf 'm:Auto Builder <builder@example.com>\n' >> APKINDEX
+        printf 't:1693353600\n' >> APKINDEX
+        printf 'c:Q1ABCD1234567890\n' >> APKINDEX
+        printf '\n' >> APKINDEX
         
         tar -czf APKINDEX.tar.gz APKINDEX
         
