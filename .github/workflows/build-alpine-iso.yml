@@ -397,6 +397,7 @@ jobs:
 
     - name: Create release
       if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+      continue-on-error: true
       uses: softprops/action-gh-release@v1
       with:
         tag_name: auto-${{ github.run_number }}
@@ -419,3 +420,19 @@ jobs:
         prerelease: true
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    
+    - name: Show build summary
+      run: |
+        echo "🎉 Build completed successfully!"
+        echo ""
+        echo "📋 Build Summary:"
+        echo "=================="
+        echo "🐧 Alpine Version: ${{ env.ALPINE_VERSION }}"
+        echo "🏗️ Architecture: ${{ env.ALPINE_ARCH }}"
+        echo "📦 Package: hardclone-cli v2.1.4"
+        echo ""
+        echo "📁 Generated files:"
+        ls -la alpine-hardclone-*.iso 2>/dev/null || echo "⚠️ No ISO files found"
+        echo ""
+        echo "💡 ISO file is available as artifact even if release creation failed"
+        echo "💡 You can download it from the Actions tab"
