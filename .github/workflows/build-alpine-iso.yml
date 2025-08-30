@@ -97,17 +97,18 @@ jobs:
         printf '%s\n' "build() { cd \"\$builddir\"; python3 setup.py build }" >> APKBUILD
         printf '%s\n' "package() { cd \"\$builddir\"; python3 setup.py install --root=\"\$pkgdir\" --optimize=1 }" >> APKBUILD
         printf '%s\n' 'sha512sums="SKIP"' >> APKBUILD
-
+        
         # Tworzymy archiwum źródłowe
         cd ..
         tar -czf "$APK_DIR/$APK_NAME-$APK_VER.tar.gz" "$APK_NAME"
-
+        
         # Symulujemy budowanie APK
         mkdir -p pkg-temp/usr/bin
-        cp hardclone/main.py pkg-temp/usr/bin/hardclone
+        cp "$APK_NAME/hardclone/main.py" pkg-temp/usr/bin/hardclone
         chmod +x pkg-temp/usr/bin/hardclone
-
+        
         tar -czf "$APK_DIR/$APK_NAME-$APK_VER-$APK_REL.apk" -C pkg-temp .
+
 
         echo "✅ Pakiet hardclone-cli zbudowany"
         ls -l "$APK_DIR"
