@@ -8,14 +8,14 @@ on:
   workflow_dispatch:
 
 env:
-  ALPINE_BRANCH: v3.18
-  ALPINE_VERSION: 3.18.4
-  ALPINE_ARCH: x86_64
+  ALPINE_BRANCH: "v3.18"
+  ALPINE_VERSION: "3.18.4"
+  ALPINE_ARCH: "x86_64"
 
 jobs:
   build-iso:
     runs-on: ubuntu-latest
-
+    
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
@@ -51,9 +51,40 @@ jobs:
         cd alpine-build/src
         mkdir -p hardclone-cli
         cd hardclone-cli
-
         # Skopiowanie źródeł repo (demo)
         cp -r ../../../../* . 2>/dev/null || true
+
+        # Tworzenie APKBUILD
+        cat > APKBUILD << 'EOF'
+# Maintainer: Your Name <your.email@example.com>
+pkgname=hardclone-cli
+pkgver=2.1.4
+pkgrel=0
+pkgdesc="Hardware cloning utility"
+url="https://github.com/yourusername/hardclone-cli"
+arch="all"
+license="MIT"
+depends="python3 py3-pip py3-dialog dialog"
+makedepends="python3-dev py3-setuptools"
+source="hardclone-cli-$pkgver.tar.gz"
+builddir="$srcdir/hardclone-cli-$pkgver"
+
+prepare() {
+    default_prepare
+}
+
+build() {
+    cd "$builddir"
+    python3 setup.py build
+}
+
+package() {
+    cd "$builddir"
+    python3 setup.py install --root="$pkgdir" --optimize=1
+}
+
+sha512sums="SKIP"
+EOF
 
         # Tworzenie setup.py
         cat > setup.py << 'EOF'
@@ -72,7 +103,7 @@ setup(
 )
 EOF
 
-        # Tworzenie struktury pakietu
+        # Tworzenie demo struktury pakietu
         mkdir -p hardclone
         touch hardclone/__init__.py
         cat > hardclone/main.py << 'EOF'
@@ -89,23 +120,22 @@ EOF
         tar -czf hardclone-cli-2.1.4.tar.gz hardclone-cli/
         cd hardclone-cli
 
-        # Budowanie “fake” pakietu APK
+        # Budowanie pakietu (symulacja)
         mkdir -p pkg-temp/usr/bin
         cp hardclone/main.py pkg-temp/usr/bin/hardclone
         chmod +x pkg-temp/usr/bin/hardclone
 
-        # Tworzenie archiwum APK
         mkdir -p ../../apks
         cd pkg-temp
-        tar -czf ../../apks/hardclone-cli-2.1.4-r0.apk .
-        ls -la ../../apks
+        tar -czf ../../apks/hardclone-cli-2.1.4-r0.apk *
 
         echo "✅ Pakiet hardclone-cli zbudowany"
 
     - name: Create APK repository index
       run: |
         cd alpine-build/apks
-        echo "C:Q1/hardclone-cli-2.1.4-r0
+        cat > APKINDEX << 'EOF'
+C:Q1/hardclone-cli-2.1.4-r0
 P:hardclone-cli
 V:2.1.4-r0
 A:x86_64
@@ -117,29 +147,26 @@ L:MIT
 o:hardclone-cli
 m:Your Name <your.email@example.com>
 t:1693353600
-c:Q1ABCD1234567890" > APKINDEX
-
+c:Q1ABCD1234567890
+EOF
         tar -czf APKINDEX.tar.gz APKINDEX
         echo "✅ Indeks repozytorium utworzony"
-        ls -la APKINDEX.tar.gz
 
     - name: Download and prepare Alpine ISO
       run: |
         mkdir -p iso-download
         cd iso-download
-        ISO_URL="https://dl-cdn.alpinelinux.org/alpine/v3.18/releases/x86_64/alpine-standard-3.18.0-x86_64.iso"
+        ISO_URL="https://dl-cdn.alpinelinux.org/alpine/${{ env.ALPINE_BRANCH }}/releases/${{ env.ALPINE_ARCH }}/alpine-standard-${{ env.ALPINE_VERSION }}-${{ env.ALPINE_ARCH }}.iso"
         wget -O alpine-standard.iso "$ISO_URL"
         echo "✅ Alpine ISO pobrane"
 
     - name: Extract ISO contents
       run: |
         mkdir -p iso-contents
-        sudo mkdir -p /mnt/iso
-        sudo mount -o loop iso-download/alpine-standard.iso /mnt/iso
-        sudo cp -r /mnt/iso/* iso-contents/
-        sudo umount /mnt/iso
+        sudo mount -o loop iso-download/alpine-standard.iso /mnt
+        sudo cp -r /mnt/* iso-contents/
+        sudo umount /mnt
         sudo chown -R $USER:$USER iso-contents
-        echo "✅ Zawartość ISO rozpakowana"
 
     - name: Modify modloop
       run: |
@@ -161,16 +188,15 @@ c:Q1ABCD1234567890" > APKINDEX
         mkdir -p modloop-modify
         unsquashfs -d modloop-modify "$MODLOOP_PATH"
 
-        # Konfiguracja repozytoriów
         mkdir -p modloop-modify/etc/apk
-        echo "https://dl-cdn.alpinelinux.org/alpine/v3.18/main" > modloop-modify/etc/apk/repositories
-        echo "https://dl-cdn.alpinelinux.org/alpine/v3.18/community" >> modloop-modify/etc/apk/repositories
+        echo "https://dl-cdn.alpinelinux.org/alpine/${{ env.ALPINE_BRANCH }}/main" > modloop-modify/etc/apk/repositories
+        echo "https://dl-cdn.alpinelinux.org/alpine/${{ env.ALPINE_BRANCH }}/community" >> modloop-modify/etc/apk/repositories
         echo "/apks" >> modloop-modify/etc/apk/repositories
 
-        # Dodanie naszego pakietu
         mkdir -p modloop-modify/apks
         cp alpine-build/apks/hardclone-cli-*.apk modloop-modify/apks/
         cp alpine-build/apks/APKINDEX.tar.gz modloop-modify/apks/
+
         echo "✅ Modloop modified"
 
     - name: Rebuild modloop
@@ -188,20 +214,26 @@ c:Q1ABCD1234567890" > APKINDEX
 
         cp "$MODLOOP_PATH" "$MODLOOP_PATH.backup"
         mksquashfs modloop-modify "$MODLOOP_PATH" -comp xz -noappend
-        echo "✅ Modloop rebuilt"
+        echo "✅ Nowy modloop utworzony"
 
     - name: Create custom ISO
       run: |
         BOOT_DIR="iso-contents/boot"
         OUTPUT_ISO="alpine-hardclone-${{ env.ALPINE_VERSION }}-${{ env.ALPINE_ARCH }}.iso"
+
         if [ -f "$BOOT_DIR/isolinux/isolinux.bin" ]; then
           genisoimage -r -J -b boot/isolinux/isolinux.bin -c boot/isolinux/boot.cat \
-                     -no-emul-boot -boot-load-size 4 -boot-info-table \
-                     -V "Alpine-HardClone" -o "$OUTPUT_ISO" iso-contents/
+            -no-emul-boot -boot-load-size 4 -boot-info-table \
+            -V "Alpine-HardClone" -o "$OUTPUT_ISO" iso-contents/
+        elif [ -f "$BOOT_DIR/syslinux/isolinux.bin" ]; then
+          genisoimage -r -J -b boot/syslinux/isolinux.bin -c boot/syslinux/boot.cat \
+            -no-emul-boot -boot-load-size 4 -boot-info-table \
+            -V "Alpine-HardClone" -o "$OUTPUT_ISO" iso-contents/
         else
           genisoimage -r -J -V "Alpine-HardClone" -o "$OUTPUT_ISO" iso-contents/
         fi
-        echo "✅ ISO created: $OUTPUT_ISO"
+
+        echo "✅ Niestandardowe ISO utworzone: $OUTPUT_ISO"
 
     - name: Upload ISO artifact
       uses: actions/upload-artifact@v4
@@ -209,22 +241,3 @@ c:Q1ABCD1234567890" > APKINDEX
         name: alpine-hardclone-iso
         path: alpine-hardclone-*.iso
         retention-days: 7
-
-    - name: Create release
-      if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-      uses: softprops/action-gh-release@v1
-      with:
-        tag_name: auto-${{ github.run_number }}
-        name: Alpine HardClone ISO Build ${{ github.run_number }}
-        body: |
-          Automatycznie zbudowane Alpine Linux ISO z hardclone-cli
-          
-          **Zawiera:**
-          - Alpine Linux ${{ env.ALPINE_VERSION }}
-          - hardclone-cli v2.1.4
-          - Architektura: ${{ env.ALPINE_ARCH }}
-        files: alpine-hardclone-*.iso
-        draft: false
-        prerelease: true
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
