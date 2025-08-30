@@ -144,17 +144,30 @@ jobs:
         # Tworzenie prostego pakietu APK (symulacja)
         cd pkg-temp
         
-        # Upewnienie się, że katalog docelowy istnieje
-        mkdir -p ../../apks
-        tar -czf ../../apks/hardclone-cli-2.1.4-r0.apk *
+        # Upewnienie się, że katalog docelowy istnieje (względem głównego katalogu)
+        mkdir -p ../../../apks
+        tar -czf ../../../apks/hardclone-cli-2.1.4-r0.apk *
         
         echo "✅ Pakiet hardclone-cli zbudowany"
+        
+        # Sprawdzenie czy plik został utworzony
+        echo "📋 Zawartość katalogu apks:"
+        ls -la ../../../apks/
 
     - name: Create APK repository index
       run: |
         cd alpine-build/apks
         
         echo "📦 Tworzenie indeksu repozytorium APK..."
+        
+        # Sprawdzenie czy katalog istnieje i czy są w nim pakiety
+        if [ ! -d "$(pwd)" ]; then
+          echo "❌ Katalog apks nie istnieje"
+          exit 1
+        fi
+        
+        echo "📋 Zawartość katalogu apks:"
+        ls -la
         
         # Sprawdzenie czy są pakiety
         if ls *.apk 1> /dev/null 2>&1; then
@@ -164,6 +177,9 @@ jobs:
               echo "⚠️  Nie można wyciągnąć metadanych z $apk, używam domyślnych"
             fi
           done
+        else
+          echo "❌ Brak plików APK w katalogu"
+          exit 1
         fi
         
         # Tworzenie prostego indeksu APKINDEX
