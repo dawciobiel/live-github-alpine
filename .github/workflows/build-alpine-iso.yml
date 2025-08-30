@@ -321,15 +321,21 @@ jobs:
         
         echo "📦 Znaleziono modloop: $MODLOOP_PATH"
         
-        # Sprawdzenie uprawnień i zmiana na user
+        # Sprawdzenie uprawnień
         echo "🔧 Sprawdzanie uprawnień..."
-        sudo chown -R $USER:$USER iso-contents/
+        ls -la "$MODLOOP_PATH"
         
-        # Backup oryginalnego
-        cp "$MODLOOP_PATH" "$MODLOOP_PATH.backup"
+        # Backup oryginalnego (z sudo)
+        sudo cp "$MODLOOP_PATH" "$MODLOOP_PATH.backup"
         
-        # Tworzenie nowego modloop
-        mksquashfs modloop-modify "$MODLOOP_PATH" -comp xz -noappend
+        # Tworzenie nowego modloop (tymczasowo)
+        mksquashfs modloop-modify modloop-new.squashfs -comp xz -noappend
+        
+        # Zastąpienie oryginalnego (z sudo)
+        sudo cp modloop-new.squashfs "$MODLOOP_PATH"
+        
+        # Sprzątanie
+        rm modloop-new.squashfs
         
         echo "✅ Nowy modloop utworzony"
         ls -la "$MODLOOP_PATH"
