@@ -11,6 +11,9 @@ env:
   ALPINE_BRANCH: "v3.18"
   ALPINE_VERSION: "3.18.4"
   ALPINE_ARCH: "x86_64"
+  APK_NAME: "hardclone-cli"
+  APK_VER: "2.1.4"
+  APK_REL: "r0"
 
 jobs:
   build-iso:
@@ -36,7 +39,6 @@ jobs:
           python3-pip \
           python3-setuptools \
           python3-dev \
-          python3-dialog \
           dialog \
           tar \
           gzip
@@ -48,98 +50,88 @@ jobs:
 
     - name: Build hardclone-cli package
       run: |
-        cd alpine-build/src
-        mkdir -p hardclone-cli
-        cd hardclone-cli
-        cp -r ../../../../* . 2>/dev/null || true
+        SRC_DIR="$(pwd)/alpine-build/src"
+        APK_DIR="$(pwd)/alpine-build/apks"
 
-        # Tworzenie APKBUILD
-        printf '%s\n' "# Maintainer: Dawid Bielecki <dawciobiel@gmail.com>" > APKBUILD
-        printf '%s\n' "pkgname=hardclone-cli" >> APKBUILD
-        printf '%s\n' "pkgver=2.1.4" >> APKBUILD
-        printf '%s\n' "pkgrel=0" >> APKBUILD
-        printf '%s\n' 'pkgdesc="Hardware cloning utility"' >> APKBUILD
-        printf '%s\n' 'url="https://github.com/yourusername/hardclone-cli"' >> APKBUILD
-        printf '%s\n' 'arch="all"' >> APKBUILD
-        printf '%s\n' 'license="MIT"' >> APKBUILD
-        printf '%s\n' 'depends="python3 py3-pip py3-dialog dialog"' >> APKBUILD
-        printf '%s\n' 'makedepends="python3-dev py3-setuptools"' >> APKBUILD
-        printf '%s\n' 'source="hardclone-cli-$pkgver.tar.gz"' >> APKBUILD
-        printf '%s\n' 'builddir="$srcdir/hardclone-cli-$pkgver"' >> APKBUILD
-        printf '%s\n' "prepare() {" >> APKBUILD
-        printf '%s\n' "    default_prepare" >> APKBUILD
-        printf '%s\n' "}" >> APKBUILD
-        printf '%s\n' "build() {" >> APKBUILD
-        printf '%s\n' '    cd "$builddir"' >> APKBUILD
-        printf '%s\n' '    python3 setup.py build' >> APKBUILD
-        printf '%s\n' "}" >> APKBUILD
-        printf '%s\n' "package() {" >> APKBUILD
-        printf '%s\n' '    cd "$builddir"' >> APKBUILD
-        printf '%s\n' '    python3 setup.py install --root="$pkgdir" --optimize=1' >> APKBUILD
-        printf '%s\n' "}" >> APKBUILD
-        printf '%s\n' 'sha512sums="SKIP"' >> APKBUILD
+        mkdir -p "$SRC_DIR/$APK_NAME"
+        cd "$SRC_DIR/$APK_NAME"
 
-        # Tworzenie setup.py
+        # Tworzymy demo pakietu
+        mkdir -p hardclone
+        touch hardclone/__init__.py
+        printf '%s\n' "def main():" > hardclone/main.py
+        printf '%s\n' '    print("hardclone-cli v2.1.4 - Hardware cloning utility")' >> hardclone/main.py
+        printf '%s\n' '    print("This is a demo version")' >> hardclone/main.py
+        printf '%s\n' 'if __name__ == "__main__":' >> hardclone/main.py
+        printf '%s\n' '    main()' >> hardclone/main.py
+
+        # Tworzymy setup.py
         printf '%s\n' "from setuptools import setup, find_packages" > setup.py
         printf '%s\n' "" >> setup.py
         printf '%s\n' "setup(" >> setup.py
-        printf '%s\n' '    name="hardclone-cli",' >> setup.py
-        printf '%s\n' '    version="2.1.4",' >> setup.py
-        printf '%s\n' '    packages=find_packages(),' >> setup.py
-        printf '%s\n' '    install_requires=[],' >> setup.py
-        printf '%s\n' '    entry_points={' >> setup.py
+        printf '%s\n' "    name=\"$APK_NAME\"," >> setup.py
+        printf '%s\n' "    version=\"$APK_VER\"," >> setup.py
+        printf '%s\n' "    packages=find_packages()," >> setup.py
+        printf '%s\n' "    install_requires=[]," >> setup.py
+        printf '%s\n' "    entry_points={" >> setup.py
         printf '%s\n' "        'console_scripts': [" >> setup.py
         printf '%s\n' "            'hardclone=hardclone.main:main'," >> setup.py
         printf '%s\n' "        ]," >> setup.py
         printf '%s\n' "    }," >> setup.py
         printf '%s\n' ")" >> setup.py
 
-        # Tworzenie demo struktury pakietu
-        mkdir -p hardclone
-        touch hardclone/__init__.py
-        printf '%s\n' "def main():" > hardclone/main.py
-        printf '%s\n' '    print("hardclone-cli v2.1.4 - Hardware cloning utility")' >> hardclone/main.py
-        printf '%s\n' '    print("This is a demo version")' >> hardclone/main.py
-        printf '%s\n' "" >> hardclone/main.py
-        printf '%s\n' 'if __name__ == "__main__":' >> hardclone/main.py
-        printf '%s\n' '    main()' >> hardclone/main.py
+        # Tworzymy APKBUILD
+        printf '%s\n' "# Maintainer: Dawid Bielecki <dawciobiel@gmail.com>" > APKBUILD
+        printf '%s\n' "pkgname=$APK_NAME" >> APKBUILD
+        printf '%s\n' "pkgver=$APK_VER" >> APKBUILD
+        printf '%s\n' "pkgrel=0" >> APKBUILD
+        printf '%s\n' 'pkgdesc="Hardware cloning utility"' >> APKBUILD
+        printf '%s\n' 'url="https://github.com/dawciobiel/hardclone-cli"' >> APKBUILD
+        printf '%s\n' 'arch="all"' >> APKBUILD
+        printf '%s\n' 'license="GPL-3.0-or-later"' >> APKBUILD
+        printf '%s\n' 'depends="python3 py3-pip py3-dialog dialog"' >> APKBUILD
+        printf '%s\n' 'makedepends="python3-dev py3-setuptools"' >> APKBUILD
+        printf '%s\n' 'source="hardclone-cli-$pkgver.tar.gz"' >> APKBUILD
+        printf '%s\n' 'builddir="$srcdir/hardclone-cli-$pkgver"' >> APKBUILD
+        printf '%s\n' "prepare() { default_prepare }" >> APKBUILD
+        printf '%s\n' "build() { cd \"\$builddir\"; python3 setup.py build }" >> APKBUILD
+        printf '%s\n' "package() { cd \"\$builddir\"; python3 setup.py install --root=\"\$pkgdir\" --optimize=1 }" >> APKBUILD
+        printf '%s\n' 'sha512sums="SKIP"' >> APKBUILD
 
-        # Tworzenie archiwum źródłowego
+        # Tworzymy archiwum źródłowe
         cd ..
-        tar -czf hardclone-cli-2.1.4.tar.gz hardclone-cli/
-        cd hardclone-cli
+        tar -czf "$APK_DIR/$APK_NAME-$APK_VER.tar.gz" "$APK_NAME"
 
-        # Budowanie pakietu (symulacja)
+        # Symulujemy budowanie APK
         mkdir -p pkg-temp/usr/bin
         cp hardclone/main.py pkg-temp/usr/bin/hardclone
         chmod +x pkg-temp/usr/bin/hardclone
 
-        APK_OUTPUT_DIR="$(pwd)/../../../apks"
-        mkdir -p "$APK_OUTPUT_DIR"
-        cd pkg-temp
-        tar -czf "$APK_OUTPUT_DIR/hardclone-cli-2.1.4-r0.apk" *
+        tar -czf "$APK_DIR/$APK_NAME-$APK_VER-$APK_REL.apk" -C pkg-temp .
 
         echo "✅ Pakiet hardclone-cli zbudowany"
+        ls -l "$APK_DIR"
 
     - name: Create APK repository index
       run: |
-        cd alpine-build/apks
-        printf '%s\n' "C:Q1/hardclone-cli-2.1.4-r0" > APKINDEX
-        printf '%s\n' "P:hardclone-cli" >> APKINDEX
-        printf '%s\n' "V:2.1.4-r0" >> APKINDEX
+        APK_DIR="$(pwd)/alpine-build/apks"
+        cd "$APK_DIR"
+        printf '%s\n' "C:Q1/$APK_NAME-$APK_VER-$APK_REL" > APKINDEX
+        printf '%s\n' "P:$APK_NAME" >> APKINDEX
+        printf '%s\n' "V:$APK_VER-$APK_REL" >> APKINDEX
         printf '%s\n' "A:x86_64" >> APKINDEX
         printf '%s\n' "S:1024" >> APKINDEX
         printf '%s\n' "I:2048" >> APKINDEX
         printf '%s\n' "T:Hardware cloning utility" >> APKINDEX
         printf '%s\n' "U:https://github.com/dawciobiel/hardclone-cli" >> APKINDEX
-        printf '%s\n' "L:MIT" >> APKINDEX
-        printf '%s\n' "o:hardclone-cli" >> APKINDEX
+        printf '%s\n' "L:GPL-3.0-or-later" >> APKINDEX
+        printf '%s\n' "o:$APK_NAME" >> APKINDEX
         printf '%s\n' "m:Dawid Bielecki <dawciobiel@gmail.com>" >> APKINDEX
-        printf '%s\n' "t:1693353600" >> APKINDEX
+        printf '%s\n' "t:$(date +%s)" >> APKINDEX
         printf '%s\n' "c:Q1ABCD1234567890" >> APKINDEX
         tar -czf APKINDEX.tar.gz APKINDEX
         echo "✅ Indeks repozytorium utworzony"
-
+        ls -l "$APK_DIR"
 
     - name: Download and prepare Alpine ISO
       run: |
@@ -180,41 +172,6 @@ jobs:
         mkdir -p modloop-modify/etc/apk
         echo "https://dl-cdn.alpinelinux.org/alpine/${{ env.ALPINE_BRANCH }}/main" > modloop-modify/etc/apk/repositories
         echo "https://dl-cdn.alpinelinux.org/alpine/${{ env.ALPINE_BRANCH }}/community" >> modloop-modify/etc/apk/repositories
-        echo "/apks" >> modloop-modify/etc/apk/repositories
+        echo "/alpine-build/apks" >> modloop-modify/etc/apk/repositories
 
-        mkdir -p modloop-modify/apks
-        cp alpine-build/apks/hardclone-cli-*.apk modloop-modify/apks/
-        cp alpine-build/apks/APKINDEX.tar.gz modloop-modify/apks/
-
-        echo "✅ Modloop modified"
-
-    - name: Rebuild modloop
-      run: |
-        MODLOOP_PATH=""
-        if [ -f "iso-contents/boot/modloop-standard" ]; then
-          MODLOOP_PATH="iso-contents/boot/modloop-standard"
-        elif [ -f "iso-contents/boot/modloop-lts" ]; then
-          MODLOOP_PATH="iso-contents/boot/modloop-lts"
-        elif [ -f "iso-contents/boot/x86_64/modloop-standard" ]; then
-          MODLOOP_PATH="iso-contents/boot/x86_64/modloop-standard"
-        elif [ -f "iso-contents/boot/x86_64/modloop-lts" ]; then
-          MODLOOP_PATH="iso-contents/boot/x86_64/modloop-lts"
-        fi
-
-        sudo cp "$MODLOOP_PATH" "$MODLOOP_PATH.backup"
-        sudo mksquashfs modloop-modify "$MODLOOP_PATH" -comp xz -noappend
-        echo "✅ Nowy modloop utworzony"
-
-    - name: Create custom ISO
-      run: |
-        BOOT_DIR="iso-contents/boot"
-        OUTPUT_ISO="alpine-hardclone-${{ env.ALPINE_VERSION }}-${{ env.ALPINE_ARCH }}.iso"
-
-        if [ -f "$BOOT_DIR/isolinux/isolinux.bin" ]; then
-          genisoimage -r -J -b boot/isolinux/isolinux.bin -c boot/isolinux/boot.cat \
-            -no-emul-boot -boot-load-size 4 -boot-info-table \
-            -V "Alpine-HardClone" -o "$OUTPUT_ISO" iso-contents/
-        elif [ -f "$BOOT_DIR/syslinux/isolinux.bin" ]; then
-          genisoimage -r -J -b boot/syslinux/isolinux.bin -c boot/syslinux/boot.cat \
-            -no-emul-boot -boot-load-size 4 -boot-info-table \
-            -V "Alpine-Hard
+        mkdir -
